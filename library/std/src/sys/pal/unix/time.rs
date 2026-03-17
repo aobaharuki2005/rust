@@ -3,6 +3,41 @@ use core::num::niche_types::Nanoseconds;
 use crate::time::Duration;
 use crate::{fmt, io};
 
+// Khai báo các hàm Mach External
+#[cfg(target_vendor = "apple")]
+mod mach {
+    use crate::sync::atomic::{AtomicU64, Ordering};
+    use crate::libc;
+
+    #[repr(C)]
+    pub struct mach_timebase_info {
+        pub numer: u32,
+        pub denom: u32,
+    }
+
+    // Thêm từ khóa unsafe ở đây
+    unsafe extern "C" {
+        pub fn mach_absolute_time() -> u64;
+        pub fn mach_timebase_info(info: *mut mach_timebase_info) -> libc::c_int;
+        pub fn gettimeofday(tp: *mut libc::timeval, tzp: *mut libc::c_void) -> libc::c_int;
+    }
+
+    pub fn get_timebase() -> mach_timebase_info {
+        static ONCE: AtomicU64 = AtomicU64::new(0);
+        let val = ONCE.load(Ordering::Relaxed);
+        if val != 0 {
+            return mach_timebase_info { numer: (val >> 32) as u32, denom: val as u32 };
+        }
+        let mut info = mach_timebase_info { numer: 0, denom: 0 };
+        // Các lời gọi hàm bên trong khối unsafe extern mặc định được coi là unsafe
+        unsafe {
+            mach_timebase_info(&mut info);
+        }
+        ONCE.store(((info.numer as u64) << 32) | (info.denom as u64), Ordering::Relaxed);
+        info
+    }
+}
+
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 pub const UNIX_EPOCH: SystemTime = SystemTime { t: Timespec::zero() };
 #[allow(dead_code)] // Used for pthread condvar timeouts
@@ -102,6 +137,26 @@ impl Timespec {
     pub fn now(clock: libc::clockid_t) -> Timespec {
         use crate::mem::MaybeUninit;
         use crate::sys::cvt;
+
+        // --- ĐOẠN PATCH CHO APPLE ---
+        #[cfg(target_vendor = "apple")]
+        {
+            if clock == libc::CLOCK_REALTIME {
+                let mut tv = libc::timeval { tv_sec: 0, tv_usec: 0 };
+                unsafe { mach::gettimeofday(&mut tv, crate::ptr::null_mut()); }
+                return Timespec::new(tv.tv_sec as i64, (tv.tv_usec as i64) * 1000).unwrap();
+            } else {
+                // Giả định là CLOCK_MONOTONIC hoặc UPTIME_RAW
+                let info = mach::get_timebase();
+                let raw = unsafe { mach::mach_absolute_time() };
+                let nsecs = raw as u128 * info.numer as u128 / info.denom as u128;
+                return Timespec::new(
+                    (nsecs / NSEC_PER_SEC as u128) as i64,
+                    (nsecs % NSEC_PER_SEC as u128) as i64,
+                ).unwrap();
+            }
+        }
+        // --- HẾT ĐOẠN PATCH ---
 
         // Try to use 64-bit time in preparation for Y2038.
         #[cfg(all(
@@ -274,7 +329,8 @@ pub struct Instant {
 
 impl Instant {
     #[cfg(target_vendor = "apple")]
-    pub(crate) const CLOCK_ID: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
+    // Chúng ta không dùng ID của libc nữa vì đã handle bằng mach_absolute_time ở trên
+    pub(crate) const CLOCK_ID: libc::clockid_t = 0;
     #[cfg(not(target_vendor = "apple"))]
     pub(crate) const CLOCK_ID: libc::clockid_t = libc::CLOCK_MONOTONIC;
     pub fn now() -> Instant {
