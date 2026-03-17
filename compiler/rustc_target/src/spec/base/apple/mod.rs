@@ -278,7 +278,7 @@ impl OSVersion {
         // $ rustc --print deployment-target
         // ```
         let (major, minor, patch) = match os {
-            "macos" => (10, 12, 0),
+            "macos" => (10, 7, 0),
             "ios" => (10, 0, 0),
             "tvos" => (10, 0, 0),
             "watchos" => (5, 0, 0),
