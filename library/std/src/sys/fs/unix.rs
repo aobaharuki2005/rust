@@ -867,6 +867,7 @@ impl Drop for Dir {
             target_os = "vxworks",
             target_os = "rtems",
             target_os = "nuttx",
+            target_os = "macos",
         )))]
         {
             let fd = unsafe { libc::dirfd(self.0) };
