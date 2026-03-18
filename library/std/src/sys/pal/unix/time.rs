@@ -184,7 +184,7 @@ impl Timespec {
                 return Timespec::new(t.tv_sec as i64, t.tv_nsec as i64).unwrap();
             }
         }
-
+        #[allow(unreachable_code)]
         let mut t = MaybeUninit::uninit();
         cvt(unsafe { libc::clock_gettime(clock, t.as_mut_ptr()) }).unwrap();
         let t = unsafe { t.assume_init() };
