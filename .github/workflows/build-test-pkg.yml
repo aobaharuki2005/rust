@@ -8,7 +8,7 @@ on:
 
 jobs:
   job0_test:
-    runs-on: ubuntu-slim
+    runs-on: macos-13-large
     steps:
       - name: Hello World!
         run: |
