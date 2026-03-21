@@ -39,7 +39,7 @@ jobs:
         continue-on-error: false
         run: |
           ./x.py dist
-          ls build/x86_64-apple-darwin/dist/*.pkg || { echo "No .pkg found!"; exit 1; }
+          ls build/dist/rust-nightly-x86_64-apple-darwin.pkg || { echo "No .pkg found!"; exit 1; }
       
       - name: 5) Upload build package into Artifacts
         id: step5_uploadArtifacts
@@ -47,5 +47,5 @@ jobs:
         with:
           name: build_output
           path: |
-            build/x86_64-apple-darwin/dist/*.pkg
+            build/dist/rust-nightly-x86_64-apple-darwin.pkg
           if-no-files-found: error
