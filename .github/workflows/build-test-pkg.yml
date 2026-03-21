@@ -7,44 +7,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  job0_test:
-    runs-on: macos-15-intel
+  JOB 1 (solely): Build
+  job1_build:
+    runs-on: macos-14-large
     steps:
-      - name: Hello World!
+      - name: 1) Checkout code
+        id: step1_checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 1  
+
+      - name: 2) Configure build options
+        id: step2_configBuildOpts
         run: |
-          echo "Hello World!"
-  # JOB 1 (solely): Build
-  # job1_build:
-  #   runs-on: macos-14-large
-  #   steps:
-  #     - name: 1) Checkout code
-  #       id: step1_checkout
-  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-  #       with:
-  #         fetch-depth: 1  
+          ./x.py setup dist
 
-  #     - name: 2) Configure build options
-  #       id: step2_configBuildOpts
-  #       run: |
-  #         ./x.py setup dist
+      - name: 3) Build the package
+        id: step3_build
+        run: |
+          ./x.py build
 
-  #     - name: 3) Build the package
-  #       id: step3_build
-  #       run: |
-  #         ./x.py build
-
-  #     - name: 4) Package
-  #       id: step4_package
-  #       continue-on-error: false
-  #       run: |
-  #         ./x.py dist
-  #         ls build/x86_64-apple-darwin/dist/*.pkg || { echo "No .pkg found!"; exit 1; }
+      - name: 4) Package
+        id: step4_package
+        continue-on-error: false
+        run: |
+          ./x.py dist
+          ls build/x86_64-apple-darwin/dist/*.pkg || { echo "No .pkg found!"; exit 1; }
       
-  #     - name: 5) Upload build package into Artifacts
-  #       id: step5_uploadArtifacts
-  #       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
-  #       with:
-  #         name: build_output
-  #         path: |
-  #           build/x86_64-apple-darwin/dist/*.pkg
-  #         if-no-files-found: error
+      - name: 5) Upload build package into Artifacts
+        id: step5_uploadArtifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: build_output
+          path: |
+            build/x86_64-apple-darwin/dist/*.pkg
+          if-no-files-found: error
