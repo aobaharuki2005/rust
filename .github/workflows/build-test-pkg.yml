@@ -10,22 +10,19 @@ jobs:
   # JOB 1 (solely): Build
   job1_build:
     runs-on: macos-15-intel
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET="10.7"
+      CFLAGS="-mmacosx-version-min=10.7"
+      CXXFLAGS="-mmacosx-version-min=10.7"
+      LDFLAGS="-mmacosx-version-min=10.7"
+    
     steps:
       - name: 1) Checkout code
         id: step1_checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 100 
-
-      - name: 2) Setup Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          # Optional: This enables caching for pip dependencies
-          cache: 'pip' 
-
-      - name: Verify Python version
-        run: python --version
 
       - name: 2) Configure build options
         id: step2_configBuildOpts
