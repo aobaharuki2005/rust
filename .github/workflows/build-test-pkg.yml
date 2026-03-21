@@ -17,6 +17,16 @@ jobs:
         with:
           fetch-depth: 1  
 
+      - name: 2) Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          # Optional: This enables caching for pip dependencies
+          cache: 'pip' 
+
+      - name: Verify Python version
+        run: python --version
+
       - name: 2) Configure build options
         id: step2_configBuildOpts
         run: |
