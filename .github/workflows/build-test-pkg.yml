@@ -20,24 +20,24 @@ jobs:
     steps:
       - name: 0) Force Clean Path
         run: echo "PATH=/usr/bin:/bin:/usr/sbin:/sbin" >> $GITHUB_PATH
-      
-      - name: 1) Checkout code
-        id: step1_checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          fetch-depth: 50
 
       - name: Verify if the shell environment has been correctly configured
         run: |
           EXPECTED_PREFIX="/usr/bin:/bin:/usr/sbin:/sbin"
-          if [[ "$PATH" != "$EXPECTED_PREFIX"* ]]; then
+          if [[ "$PATH" != $EXPECTED_PREFIX* ]]; then
             echo "ERROR: Impure PATH detected! Homebrew or other tools are prepended."
             echo "Current PATH: $PATH"
             echo "Must start with: $EXPECTED_PREFIX"
             exit 1
           fi
           echo "Environment prefix is clean. Proceeding..."
-
+      
+      - name: 1) Checkout code
+        id: step1_checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 50
+          
       - name: 2) Configure build options
         id: step2_configBuildOpts
         run: |
