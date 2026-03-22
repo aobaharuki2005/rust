@@ -19,7 +19,7 @@ jobs:
     
     steps:
       - name: 0) Force Clean Path
-        run: echo "PATH=/usr/bin:/bin:/usr/sbin:/sbin" >> $GITHUB_PATH
+        run: echo "/usr/bin:/bin:/usr/sbin:/sbin" >> $GITHUB_PATH
 
       - name: Verify if the shell environment has been correctly configured
         run: |
