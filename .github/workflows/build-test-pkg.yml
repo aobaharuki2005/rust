@@ -42,7 +42,6 @@ jobs:
         id: step2_configBuildOpts
         run: |
           ./x.py setup dist
-          echo "llvm.download-ci-llvm = true" >> bootstrap.toml
 
       - name: 3) Build the package
         id: step3_build
