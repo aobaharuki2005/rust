@@ -18,16 +18,34 @@ jobs:
       LDFLAGS: "-mmacosx-version-min=10.7"
     
     steps:
+      - name: 0) Force Clean Path
+        run: echo "PATH=/usr/bin:/bin:/usr/sbin:/sbin" >> $GITHUB_PATH
+      
       - name: 1) Checkout code
         id: step1_checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          fetch-depth: 100 
+          fetch-depth: 50
+
+      - name: Verify if the shell environment has been correctly configured
+        run: |
+          EXPECTED_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+          if [ "$PATH" != "$EXPECTED_PATH" ]; then
+            echo "ERROR: Impure PATH detected!"
+            echo "Current PATH: $PATH"
+            echo "Expected: $EXPECTED_PATH"
+            exit 1
+          fi
+          echo "Environment is clean. Proceeding with build."
+
+      - name: Verify if the shell environment has been correctly configured
+        run: echo $PATH
 
       - name: 2) Configure build options
         id: step2_configBuildOpts
         run: |
           ./x.py setup dist
+          echo "llvm.download-ci-llvm = true" >> bootstrap.toml
 
       - name: 3) Build the package
         id: step3_build
