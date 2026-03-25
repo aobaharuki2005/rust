@@ -23,17 +23,22 @@ jobs:
           submodules: recursive
 
       - name: Build the package
-        id: step3_build
+        id: build
         run: |
+          ln -sf bootstrap-cross.toml bootstrap.toml
+          head -5 bootstrap.toml
           ./x.py build
 
       - name: Package
         id: pkg
         continue-on-error: false
         run: |
+          # in bootstrap-cross.toml: prefix = "build/1.91.0-custom-cross"
+          mkdir -p build/1.91.0-custom-cross
           ./x.py install
           cd build/
-          tar -a -cf 1.91.0-custom.tar.gz ./1.91.0-custom
+          tar -a -cf 1.91.0-custom-cross.tar.gz ./1.91.0-custom-cross
+         
       
       - name: Upload built package into Artifacts
         id: upload_artifact
@@ -41,5 +46,5 @@ jobs:
         with:
           name: build_output
           path: |
-            1.91.0-custom.tar.gz
+            1.91.0-custom-cross.tar.gz
           if-no-files-found: error
