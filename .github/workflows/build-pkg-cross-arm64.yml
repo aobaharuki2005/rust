@@ -1,0 +1,45 @@
+name: Build testing Rust installation package (cross x86_64-arm64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build 
+    runs-on: macos-15
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "10.7"
+      CFLAGS: "-mmacosx-version-min=10.7"
+      CXXFLAGS: "-mmacosx-version-min=10.7"
+      LDFLAGS: "-mmacosx-version-min=10.7"
+    
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Build the package
+        id: step3_build
+        run: |
+          ./x.py build
+
+      - name: Package
+        id: pkg
+        continue-on-error: false
+        run: |
+          ./x.py install
+          cd build/
+          tar -a -cf 1.91.0-custom.tar.gz ./1.91.0-custom
+      
+      - name: Upload built package into Artifacts
+        id: upload_artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: build_output
+          path: |
+            1.91.0-custom.tar.gz
+          if-no-files-found: error
