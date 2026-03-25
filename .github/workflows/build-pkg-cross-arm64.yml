@@ -58,7 +58,7 @@ jobs:
         if: always() && steps.cache-llvm-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          key: ${{ steps.cache-llvm-restore.outputs.cache-primary-key }}
+          key: ${{ runner.os }}-llvm-${{ hashfiles('bootstrap-cross.toml') }}
           path: |
             build/aarch64-apple-darwin/llvm
       
