@@ -1,0 +1,27 @@
+# Based on src/bootstrap/defaults/bootstrap.dists.toml
+
+[build]
+verbose = 1
+target = [ "aarch64-apple-darwin", "x86_64-apple-darwin" ]
+build-stage = 2
+test-stage = 2
+docs = false
+extended = true
+tools = [ "cargo" ]
+compiletest-use-stage0-libtest = true
+cargo-native-static = true
+
+[llvm]
+download-ci-llvm = false
+
+[rust]
+channel = "nightly"
+llvm-bitcode-linker = false
+
+[dist]
+# Use better compression when preparing tarballs.
+compression-profile = "balanced"
+
+[install]
+prefix = "build/1.91.0-custom-cross"
+sysconfdir = "etc"
