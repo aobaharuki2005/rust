@@ -1,7 +1,6 @@
 # Based on src/bootstrap/defaults/bootstrap.dists.toml
 
 [build]
-verbose = 1
 target = [ "aarch64-apple-darwin", "x86_64-apple-darwin" ]
 build-stage = 2
 test-stage = 2
