@@ -1,6 +1,9 @@
 name: Build testing Rust installation package (cross x86_64-arm64)
 
 on:
+  push:
+    branches:
+      - 1.91.0-custom
   workflow_dispatch:
 
 jobs:
@@ -25,6 +28,14 @@ jobs:
       - name: Select Xcode 26.2
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
+      - name: Restore cached LLVM built artifacts
+        id: cache-llvm-restore
+        uses: actions/cache/restore@v5
+        with:
+          key: ${{ runner.os }}-llvm-${{ hashfiles('bootstrap-cross.toml') }}
+          path: |
+            build/aarch64-apple-darwin/llvm
+
       - name: Build the package
         id: build
         run: |
@@ -41,7 +52,15 @@ jobs:
           ./x.py install
           cd build/
           tar -a -cf 1.91.0-custom-cross.tar.gz ./1.91.0-custom-cross
-         
+
+      - name: Always Save LLVM built artifacts
+        id: cache-llvm-save
+        if: always() && steps.cache-llvm-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          key: ${{ steps.cache-llvm-restore.outputs.cache-primary-key }}
+          path: |
+            build/aarch64-apple-darwin/llvm
       
       - name: Upload built package into Artifacts
         id: upload_artifact
@@ -49,5 +68,5 @@ jobs:
         with:
           name: build_output
           path: |
-            1.91.0-custom-cross.tar.gz
+            build/1.91.0-custom-cross.tar.gz
           if-no-files-found: error
