@@ -29,8 +29,8 @@ jobs:
 
       - name: Download bootstrapping Rust 1.74.0-custom
         run: |
-          mkdir ./bootstrap
-          cd ./bootstrap
+          mkdir /tmp/bootstrap
+          cd /tmp/bootstrap
           curl -L https://github.com/aobaharuki2005/rust/releases/download/1.74.0-custom/1.74.0-custom-aarch64.zip -o 1.74.0-custom-aarch64.zip
           unzip -q 1.74.0-custom-aarch64.zip
       
