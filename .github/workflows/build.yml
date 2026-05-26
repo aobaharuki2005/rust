@@ -26,6 +26,13 @@ jobs:
             build/aarch64-apple-darwin/llvm
           restore-keys:
             ${{ runner.os }}-llvm17-
+
+      - name: Download bootstrapping Rust 1.74.0-custom
+        run: |
+          mkdir ./bootstrap
+          cd ./bootstrap
+          curl -L https://github.com/aobaharuki2005/rust/releases/download/1.74.0-custom/1.74.0-custom-crosscompiling.zip -o 1.74.0-custom-crosscompiling.zip
+          unzip -q 1.74.0-custom-crosscompiling.zip
       
       - name: Build and package
         run: ./build.sh

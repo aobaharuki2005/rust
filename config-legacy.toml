@@ -7,8 +7,8 @@ docs = false
 extended = true
 
 ### In case of using custom built Rust, uncomment and modify these line
-# rustc = "/Users/test/.rustup/toolchains/1.81.0-custom/bin/rustc"
-# cargo = "/Users/test/.rustup/toolchains/1.81.0-custom/bin/cargo"
+rustc = "bootstrap/1.74.0-custom-crosscompiling/bin/rustc"
+cargo = "bootstrap/1.74.0-custom-crosscompiling/bin/cargo"
 
 submodules = false
 tools = [ "cargo" ]
@@ -22,9 +22,6 @@ static-libstdcpp = true
 targets = "X86;AArch64"
 experimental-targets = ""
 
-### In case of use pre-installed llvm, uncomment and adjust these lines
-# [target.x86_64-apple-darwin]
-# llvm-config = "/opt/local/bin/llvm-config-mp-18"
 
 [rust]
 channel = "dev"

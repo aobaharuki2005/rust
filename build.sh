@@ -15,7 +15,7 @@ printenv | grep -E "SDKROOT|MACOSX|LDFLAGS"
 ### Shallow synchronize submodules
 echo "====== STEP 1: Fetch submodules ====="
 echo "### Fetching ..."
-git submodule update --depth 1 --init
+git submodule update --depth 1 --init --recursive
 # echo "### Checking if llvm-project has been checked out correctly..."
 # cd src/llvm-project
 # git log -1 --oneline
