@@ -4,15 +4,15 @@
 host = [ "aarch64-apple-darwin" ]
 target = [ "x86_64-apple-darwin", "aarch64-apple-darwin" ]
 docs = false
-extended = true
+extended = false
 
 ### In case of using custom built Rust, uncomment and modify these line
-# rustc = "bootstrap/1.74.0-custom-crosscompiling/bin/rustc"
-# cargo = "bootstrap/1.74.0-custom-crosscompiling/bin/cargo"
+rustc = "bootstrap/1.74.0-custom-crosscompiling/bin/rustc"
+cargo = "bootstrap/1.74.0-custom-crosscompiling/bin/cargo"
 
 submodules = false
-tools = [ "cargo" ]
-cargo-native-static = true
+# tools = [ "cargo" ]
+# cargo-native-static = true
 
 [llvm]
 download-ci-llvm = false
