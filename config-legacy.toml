@@ -7,8 +7,8 @@ docs = false
 extended = true
 
 ### In case of using custom built Rust, uncomment and modify these line
-rustc = "bootstrap/1.74.0-custom-crosscompiling/bin/rustc"
-cargo = "bootstrap/1.74.0-custom-crosscompiling/bin/cargo"
+# rustc = "bootstrap/1.74.0-custom-crosscompiling/bin/rustc"
+# cargo = "bootstrap/1.74.0-custom-crosscompiling/bin/cargo"
 
 submodules = false
 tools = [ "cargo" ]
