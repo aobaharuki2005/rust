@@ -2,7 +2,7 @@
 
 ### Setting up environment variables
 # export RUSTC_WRAPPER=/Users/test/.mozbuild/sccache/sccache
-export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk
+export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk
 export MACOSX_DEPLOYMENT_TARGET=10.7
 export MACOSX_STD_DEPLOYMENT_TARGET=10.7
 export LDFLAGS="-ld_classic"
