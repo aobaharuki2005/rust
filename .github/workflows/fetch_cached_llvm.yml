@@ -1,0 +1,34 @@
+name: Fetch cached LLVM 17
+
+on:
+  workflow_dispatch:
+
+jobs:
+  job0_buildjob:
+    name: Build job
+    runs-on: macos-15
+    steps:
+      - name: Restore cached LLVM 17 (Rust 1.73-1.77)
+        id: cache-llvm-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm17-${{ github.run_id }}
+          path: |
+            build/aarch64-apple-darwin/llvm
+          restore-keys:
+            ${{ runner.os }}-llvm17-
+      
+      - name: Package LLVM 17
+        run: |
+          cd build/aarch64-apple-darwin
+          zip -qr llvm-17.zip ./llvm
+          
+      - name: Upload packaged Rust
+        id: upload_packaged_rust
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: build/llvm-17.zip
+
+
+
