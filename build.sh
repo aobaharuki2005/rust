@@ -35,4 +35,4 @@ echo "### Starting to build ..."
 echo "====== STEP 3: Install and package ====="
 /usr/bin/python3 ./x.py install
 cd build
-zip -qr 1.75.0-custom-crosscompiling.zip ./1.75.0-custom-crosscompiling
+zip -qr 1.75.0-custom-aarch64.zip ./1.75.0-custom-aarch64
