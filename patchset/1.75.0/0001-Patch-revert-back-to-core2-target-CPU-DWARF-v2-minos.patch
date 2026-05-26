@@ -1,0 +1,47 @@
+From 655bd9f31d323f653a74f79684feab6088f51e67 Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Tue, 26 May 2026 12:18:58 +0700
+Subject: [PATCH] Patch: revert back to core2 target CPU, DWARF v2, minos 10.9
+
+---
+ compiler/rustc_target/src/spec/base/apple/mod.rs | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/compiler/rustc_target/src/spec/base/apple/mod.rs b/compiler/rustc_target/src/spec/base/apple/mod.rs
+index 99e64503e25..2ff156f8193 100644
+--- a/compiler/rustc_target/src/spec/base/apple/mod.rs
++++ b/compiler/rustc_target/src/spec/base/apple/mod.rs
+@@ -67,9 +67,9 @@ fn target_cpu(self) -> &'static str {
+             // Only macOS 10.12+ is supported, which means
+             // all x86_64/x86 CPUs must be running at least penryn
+             // https://github.com/llvm/llvm-project/blob/01f924d0e37a5deae51df0d77e10a15b63aa0c0f/clang/lib/Driver/ToolChains/Arch/X86.cpp#L79-L82
+-            I386 | I686 => "penryn",
+-            X86_64 | X86_64_sim => "penryn",
+-            X86_64_macabi => "penryn",
++            I386 | I686 => "core2",
++            X86_64 | X86_64_sim => "core2",
++            X86_64_macabi => "core2",
+             // Note: `core-avx2` is slightly more advanced than `x86_64h`, see
+             // comments (and disabled features) in `x86_64h_apple_darwin` for
+             // details. It is a higher baseline then `penryn` however.
+@@ -133,7 +133,7 @@ pub fn opts(os: &'static str, arch: Arch) -> TargetOptions {
+         // LLVM notes that macOS 10.11+ and iOS 9+ default
+         // to v4, so we do the same.
+         // https://github.com/llvm/llvm-project/blob/378778a0d10c2f8d5df8ceff81f95b6002984a4b/clang/lib/Driver/ToolChains/Darwin.cpp#L1203
+-        default_dwarf_version: 4,
++        default_dwarf_version: 2,
+         frame_pointer: FramePointer::Always,
+         has_rpath: true,
+         dll_suffix: ".dylib".into(),
+@@ -229,7 +229,7 @@ fn macos_default_deployment_target(arch: Arch) -> (u32, u32) {
+     match arch {
+         // Note: Arm64_sim is not included since macOS has no simulator.
+         Arm64 | Arm64_macabi => (11, 0),
+-        _ => (10, 12),
++        _ => (10, 9),
+     }
+ }
+ 
+-- 
+2.50.1 (Apple Git-155)
+

@@ -1,0 +1,454 @@
+From f0435dd641ed8b3feb22df646b8d55403aa0b5b1 Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Tue, 26 May 2026 12:18:32 +0700
+Subject: [PATCH] Patch: restore 10.7 support in rand.rs and time.rs
+
+---
+ library/std/src/sys/unix/rand.rs |  79 +++-----
+ library/std/src/sys/unix/time.rs | 298 ++++++++++++++++++++-----------
+ 2 files changed, 223 insertions(+), 154 deletions(-)
+
+diff --git a/library/std/src/sys/unix/rand.rs b/library/std/src/sys/unix/rand.rs
+index 2825d167742..0bc3c49eefe 100644
+--- a/library/std/src/sys/unix/rand.rs
++++ b/library/std/src/sys/unix/rand.rs
+@@ -151,65 +151,40 @@ pub fn fill_bytes(v: &mut [u8]) {
+     }
+ }
+ 
+-#[cfg(target_vendor = "apple")]
++#[cfg(target_os = "macos")]
+ mod imp {
+-    use crate::io;
++    use crate::fs::File;
++    use crate::io::Read;
++    use crate::sys::os::errno;
++    use crate::sys::weak::weak;
+     use libc::{c_int, c_void, size_t};
+ 
+-    #[inline(always)]
+-    fn random_failure() -> ! {
+-        panic!("unexpected random generation error: {}", io::Error::last_os_error());
+-    }
+-
+-    #[cfg(target_os = "macos")]
+-    fn getentropy_fill_bytes(v: &mut [u8]) {
+-        extern "C" {
+-            fn getentropy(bytes: *mut c_void, count: size_t) -> c_int;
+-        }
+-
+-        // getentropy(2) permits a maximum buffer size of 256 bytes
+-        for s in v.chunks_mut(256) {
+-            let ret = unsafe { getentropy(s.as_mut_ptr().cast(), s.len()) };
+-            if ret == -1 {
+-                random_failure()
+-            }
+-        }
+-    }
+-
+-    #[cfg(not(target_os = "macos"))]
+-    fn ccrandom_fill_bytes(v: &mut [u8]) {
+-        extern "C" {
+-            fn CCRandomGenerateBytes(bytes: *mut c_void, count: size_t) -> c_int;
+-        }
+-
+-        let ret = unsafe { CCRandomGenerateBytes(v.as_mut_ptr().cast(), v.len()) };
+-        if ret == -1 {
+-            random_failure()
+-        }
++    fn getentropy_fill_bytes(v: &mut [u8]) -> bool {
++        weak!(fn getentropy(*mut c_void, size_t) -> c_int);
++
++        getentropy
++            .get()
++            .map(|f| {
++                // getentropy(2) permits a maximum buffer size of 256 bytes
++                for s in v.chunks_mut(256) {
++                    let ret = unsafe { f(s.as_mut_ptr() as *mut c_void, s.len()) };
++                    if ret == -1 {
++                        panic!("unexpected getentropy error: {}", errno());
++                    }
++                }
++                true
++            })
++            .unwrap_or(false)
+     }
+ 
+     pub fn fill_bytes(v: &mut [u8]) {
+-        // All supported versions of macOS (10.12+) support getentropy.
+-        //
+-        // `getentropy` is measurably faster (via Divan) then the other alternatives so its preferred
+-        // when usable.
+-        #[cfg(target_os = "macos")]
+-        getentropy_fill_bytes(v);
++        if getentropy_fill_bytes(v) {
++            return;
++        }
+ 
+-        // On Apple platforms, `CCRandomGenerateBytes` and `SecRandomCopyBytes` simply
+-        // call into `CCRandomCopyBytes` with `kCCRandomDefault`. `CCRandomCopyBytes`
+-        // manages a CSPRNG which is seeded from the kernel's CSPRNG and which runs on
+-        // its own thread accessed via GCD. This seems needlessly heavyweight for our purposes
+-        // so we only use it on non-Mac OSes where the better entrypoints are blocked.
+-        //
+-        // `CCRandomGenerateBytes` is used instead of `SecRandomCopyBytes` because the former is accessible
+-        // via `libSystem` (libc) while the other needs to link to `Security.framework`.
+-        //
+-        // Note that while `getentropy` has a available attribute in the macOS headers, the lack
+-        // of a header in the iOS (and others) SDK means that its can cause app store rejections.
+-        // Just use `CCRandomGenerateBytes` instead.
+-        #[cfg(not(target_os = "macos"))]
+-        ccrandom_fill_bytes(v);
++        // for older macos which doesn't support getentropy
++        let mut file = File::open("/dev/urandom").expect("failed to open /dev/urandom");
++        file.read_exact(v).expect("failed to read /dev/urandom")
+     }
+ }
+ 
+diff --git a/library/std/src/sys/unix/time.rs b/library/std/src/sys/unix/time.rs
+index f2e86a4fb2b..4fe61b28488 100644
+--- a/library/std/src/sys/unix/time.rs
++++ b/library/std/src/sys/unix/time.rs
+@@ -1,6 +1,8 @@
+ use crate::fmt;
+ use crate::time::Duration;
+ 
++pub use self::inner::Instant;
++
+ const NSEC_PER_SEC: u64 = 1_000_000_000;
+ pub const UNIX_EPOCH: SystemTime = SystemTime { t: Timespec::zero() };
+ #[allow(dead_code)] // Used for pthread condvar timeouts
+@@ -38,10 +40,6 @@ pub fn new(tv_sec: i64, tv_nsec: i64) -> SystemTime {
+         SystemTime { t: Timespec::new(tv_sec, tv_nsec) }
+     }
+ 
+-    pub fn now() -> SystemTime {
+-        SystemTime { t: Timespec::now(libc::CLOCK_REALTIME) }
+-    }
+-
+     pub fn sub_time(&self, other: &SystemTime) -> Result<Duration, Duration> {
+         self.t.sub_timespec(&other.t)
+     }
+@@ -76,65 +74,11 @@ pub const fn zero() -> Timespec {
+     }
+ 
+     const fn new(tv_sec: i64, tv_nsec: i64) -> Timespec {
+-        // On Apple OS, dates before epoch are represented differently than on other
+-        // Unix platforms: e.g. 1/10th of a second before epoch is represented as `seconds=-1`
+-        // and `nanoseconds=100_000_000` on other platforms, but is `seconds=0` and
+-        // `nanoseconds=-900_000_000` on Apple OS.
+-        //
+-        // To compensate, we first detect this special case by checking if both
+-        // seconds and nanoseconds are in range, and then correct the value for seconds
+-        // and nanoseconds to match the common unix representation.
+-        //
+-        // Please note that Apple OS nonetheless accepts the standard unix format when
+-        // setting file times, which makes this compensation round-trippable and generally
+-        // transparent.
+-        #[cfg(any(
+-            target_os = "macos",
+-            target_os = "ios",
+-            target_os = "tvos",
+-            target_os = "watchos"
+-        ))]
+-        let (tv_sec, tv_nsec) =
+-            if (tv_sec <= 0 && tv_sec > i64::MIN) && (tv_nsec < 0 && tv_nsec > -1_000_000_000) {
+-                (tv_sec - 1, tv_nsec + 1_000_000_000)
+-            } else {
+-                (tv_sec, tv_nsec)
+-            };
+         assert!(tv_nsec >= 0 && tv_nsec < NSEC_PER_SEC as i64);
+         // SAFETY: The assert above checks tv_nsec is within the valid range
+         Timespec { tv_sec, tv_nsec: unsafe { Nanoseconds(tv_nsec as u32) } }
+     }
+ 
+-    pub fn now(clock: libc::clockid_t) -> Timespec {
+-        use crate::mem::MaybeUninit;
+-        use crate::sys::cvt;
+-
+-        // Try to use 64-bit time in preparation for Y2038.
+-        #[cfg(all(
+-            target_os = "linux",
+-            target_env = "gnu",
+-            target_pointer_width = "32",
+-            not(target_arch = "riscv32")
+-        ))]
+-        {
+-            use crate::sys::weak::weak;
+-
+-            // __clock_gettime64 was added to 32-bit arches in glibc 2.34,
+-            // and it handles both vDSO calls and ENOSYS fallbacks itself.
+-            weak!(fn __clock_gettime64(libc::clockid_t, *mut __timespec64) -> libc::c_int);
+-
+-            if let Some(clock_gettime64) = __clock_gettime64.get() {
+-                let mut t = MaybeUninit::uninit();
+-                cvt(unsafe { clock_gettime64(clock, t.as_mut_ptr()) }).unwrap();
+-                return Timespec::from(unsafe { t.assume_init() });
+-            }
+-        }
+-
+-        let mut t = MaybeUninit::uninit();
+-        cvt(unsafe { libc::clock_gettime(clock, t.as_mut_ptr()) }).unwrap();
+-        Timespec::from(unsafe { t.assume_init() })
+-    }
+-
+     pub fn sub_timespec(&self, other: &Timespec) -> Result<Duration, Duration> {
+         if self >= other {
+             // NOTE(eddyb) two aspects of this `if`-`else` are required for LLVM
+@@ -272,59 +216,209 @@ fn from(t: __timespec64) -> Timespec {
+     }
+ }
+ 
+-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+-pub struct Instant {
+-    t: Timespec,
+-}
++#[cfg(any(
++    all(target_os = "macos", any(not(target_arch = "aarch64"))),
++    target_os = "ios",
++    target_os = "watchos",
++    target_os = "tvos"
++))]
++mod inner {
++    use crate::sync::atomic::{AtomicU64, Ordering};
++    use crate::sys::cvt;
++    use crate::sys_common::mul_div_u64;
++    use crate::time::Duration;
+ 
+-impl Instant {
+-    pub fn now() -> Instant {
+-        // https://www.manpagez.com/man/3/clock_gettime/
+-        //
+-        // CLOCK_UPTIME_RAW   clock that increments monotonically, in the same man-
+-        //                    ner as CLOCK_MONOTONIC_RAW, but that does not incre-
+-        //                    ment while the system is asleep.  The returned value
+-        //                    is identical to the result of mach_absolute_time()
+-        //                    after the appropriate mach_timebase conversion is
+-        //                    applied.
+-        //
+-        // Instant on macos was historically implemented using mach_absolute_time;
+-        // we preserve this value domain out of an abundance of caution.
+-        #[cfg(any(
+-            target_os = "macos",
+-            target_os = "ios",
+-            target_os = "watchos",
+-            target_os = "tvos"
+-        ))]
+-        const clock_id: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
+-        #[cfg(not(any(
+-            target_os = "macos",
+-            target_os = "ios",
+-            target_os = "watchos",
+-            target_os = "tvos"
+-        )))]
+-        const clock_id: libc::clockid_t = libc::CLOCK_MONOTONIC;
+-        Instant { t: Timespec::now(clock_id) }
++    use super::{SystemTime, Timespec, NSEC_PER_SEC};
++
++    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
++    pub struct Instant {
++        t: u64,
++    }
++
++    #[repr(C)]
++    #[derive(Copy, Clone)]
++    struct mach_timebase_info {
++        numer: u32,
++        denom: u32,
++    }
++    type mach_timebase_info_t = *mut mach_timebase_info;
++    type kern_return_t = libc::c_int;
++
++    impl Instant {
++        pub fn now() -> Instant {
++            extern "C" {
++                fn mach_absolute_time() -> u64;
++            }
++            Instant { t: unsafe { mach_absolute_time() } }
++        }
++
++        pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
++            let diff = self.t.checked_sub(other.t)?;
++            let info = info();
++            let nanos = mul_div_u64(diff, info.numer as u64, info.denom as u64);
++            Some(Duration::new(nanos / NSEC_PER_SEC, (nanos % NSEC_PER_SEC) as u32))
++        }
++
++        pub fn checked_add_duration(&self, other: &Duration) -> Option<Instant> {
++            Some(Instant { t: self.t.checked_add(checked_dur2intervals(other)?)? })
++        }
++
++        pub fn checked_sub_duration(&self, other: &Duration) -> Option<Instant> {
++            Some(Instant { t: self.t.checked_sub(checked_dur2intervals(other)?)? })
++        }
++    }
++
++    impl SystemTime {
++        pub fn now() -> SystemTime {
++            use crate::ptr;
++
++            let mut s = libc::timeval { tv_sec: 0, tv_usec: 0 };
++            cvt(unsafe { libc::gettimeofday(&mut s, ptr::null_mut()) }).unwrap();
++            return SystemTime::from(s);
++        }
+     }
+ 
+-    pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
+-        self.t.sub_timespec(&other.t).ok()
++    impl From<libc::timeval> for Timespec {
++        fn from(t: libc::timeval) -> Timespec {
++            Timespec::new(t.tv_sec as i64, 1000 * t.tv_usec as i64)
++        }
+     }
+ 
+-    pub fn checked_add_duration(&self, other: &Duration) -> Option<Instant> {
+-        Some(Instant { t: self.t.checked_add_duration(other)? })
++    impl From<libc::timeval> for SystemTime {
++        fn from(t: libc::timeval) -> SystemTime {
++            SystemTime { t: Timespec::from(t) }
++        }
+     }
+ 
+-    pub fn checked_sub_duration(&self, other: &Duration) -> Option<Instant> {
+-        Some(Instant { t: self.t.checked_sub_duration(other)? })
++    fn checked_dur2intervals(dur: &Duration) -> Option<u64> {
++        let nanos =
++            dur.as_secs().checked_mul(NSEC_PER_SEC)?.checked_add(dur.subsec_nanos() as u64)?;
++        let info = info();
++        Some(mul_div_u64(nanos, info.denom as u64, info.numer as u64))
++    }
++
++    fn info() -> mach_timebase_info {
++        // INFO_BITS conceptually is an `Option<mach_timebase_info>`. We can do
++        // this in 64 bits because we know 0 is never a valid value for the
++        // `denom` field.
++        //
++        // Encoding this as a single `AtomicU64` allows us to use `Relaxed`
++        // operations, as we are only interested in the effects on a single
++        // memory location.
++        static INFO_BITS: AtomicU64 = AtomicU64::new(0);
++
++        // If a previous thread has initialized `INFO_BITS`, use it.
++        let info_bits = INFO_BITS.load(Ordering::Relaxed);
++        if info_bits != 0 {
++            return info_from_bits(info_bits);
++        }
++
++        // ... otherwise learn for ourselves ...
++        extern "C" {
++            fn mach_timebase_info(info: mach_timebase_info_t) -> kern_return_t;
++        }
++
++        let mut info = info_from_bits(0);
++        unsafe {
++            mach_timebase_info(&mut info);
++        }
++        INFO_BITS.store(info_to_bits(info), Ordering::Relaxed);
++        info
++    }
++
++    #[inline]
++    fn info_to_bits(info: mach_timebase_info) -> u64 {
++        ((info.denom as u64) << 32) | (info.numer as u64)
++    }
++
++    #[inline]
++    fn info_from_bits(bits: u64) -> mach_timebase_info {
++        mach_timebase_info { numer: bits as u32, denom: (bits >> 32) as u32 }
+     }
+ }
+ 
+-impl fmt::Debug for Instant {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        f.debug_struct("Instant")
+-            .field("tv_sec", &self.t.tv_sec)
+-            .field("tv_nsec", &self.t.tv_nsec.0)
+-            .finish()
++#[cfg(not(any(
++    all(target_os = "macos", any(not(target_arch = "aarch64"))),
++    target_os = "ios",
++    target_os = "watchos",
++    target_os = "tvos"
++)))]
++mod inner {
++    use crate::fmt;
++    use crate::mem::MaybeUninit;
++    use crate::sys::cvt;
++    use crate::time::Duration;
++
++    use super::{SystemTime, Timespec};
++
++    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
++    pub struct Instant {
++        t: Timespec,
++    }
++
++    impl Instant {
++        pub fn now() -> Instant {
++            #[cfg(target_os = "macos")]
++            const clock_id: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
++            #[cfg(not(target_os = "macos"))]
++            const clock_id: libc::clockid_t = libc::CLOCK_MONOTONIC;
++            Instant { t: Timespec::now(clock_id) }
++        }
++
++        pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
++            self.t.sub_timespec(&other.t).ok()
++        }
++
++        pub fn checked_add_duration(&self, other: &Duration) -> Option<Instant> {
++            Some(Instant { t: self.t.checked_add_duration(other)? })
++        }
++
++        pub fn checked_sub_duration(&self, other: &Duration) -> Option<Instant> {
++            Some(Instant { t: self.t.checked_sub_duration(other)? })
++        }
++    }
++
++    impl fmt::Debug for Instant {
++        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++            f.debug_struct("Instant")
++                .field("tv_sec", &self.t.tv_sec)
++                .field("tv_nsec", &self.t.tv_nsec.0)
++                .finish()
++        }
++    }
++
++    impl SystemTime {
++        pub fn now() -> SystemTime {
++            SystemTime { t: Timespec::now(libc::CLOCK_REALTIME) }
++        }
++    }
++
++    impl Timespec {
++        pub fn now(clock: libc::clockid_t) -> Timespec {
++            // Try to use 64-bit time in preparation for Y2038.
++            #[cfg(all(
++                target_os = "linux",
++                target_env = "gnu",
++                target_pointer_width = "32",
++                not(target_arch = "riscv32")
++            ))]
++            {
++                use crate::sys::weak::weak;
++
++                // __clock_gettime64 was added to 32-bit arches in glibc 2.34,
++                // and it handles both vDSO calls and ENOSYS fallbacks itself.
++                weak!(fn __clock_gettime64(libc::clockid_t, *mut super::__timespec64) -> libc::c_int);
++
++                if let Some(clock_gettime64) = __clock_gettime64.get() {
++                    let mut t = MaybeUninit::uninit();
++                    cvt(unsafe { clock_gettime64(clock, t.as_mut_ptr()) }).unwrap();
++                    return Timespec::from(unsafe { t.assume_init() });
++                }
++            }
++
++            let mut t = MaybeUninit::uninit();
++            cvt(unsafe { libc::clock_gettime(clock, t.as_mut_ptr()) }).unwrap();
++            Timespec::from(unsafe { t.assume_init() })
++        }
+     }
+ }
+-- 
+2.50.1 (Apple Git-155)
+
