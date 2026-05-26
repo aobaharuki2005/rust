@@ -151,65 +151,40 @@ mod imp {
     }
 }
 
-#[cfg(target_vendor = "apple")]
+#[cfg(target_os = "macos")]
 mod imp {
-    use crate::io;
+    use crate::fs::File;
+    use crate::io::Read;
+    use crate::sys::os::errno;
+    use crate::sys::weak::weak;
     use libc::{c_int, c_void, size_t};
 
-    #[inline(always)]
-    fn random_failure() -> ! {
-        panic!("unexpected random generation error: {}", io::Error::last_os_error());
-    }
+    fn getentropy_fill_bytes(v: &mut [u8]) -> bool {
+        weak!(fn getentropy(*mut c_void, size_t) -> c_int);
 
-    #[cfg(target_os = "macos")]
-    fn getentropy_fill_bytes(v: &mut [u8]) {
-        extern "C" {
-            fn getentropy(bytes: *mut c_void, count: size_t) -> c_int;
-        }
-
-        // getentropy(2) permits a maximum buffer size of 256 bytes
-        for s in v.chunks_mut(256) {
-            let ret = unsafe { getentropy(s.as_mut_ptr().cast(), s.len()) };
-            if ret == -1 {
-                random_failure()
-            }
-        }
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn ccrandom_fill_bytes(v: &mut [u8]) {
-        extern "C" {
-            fn CCRandomGenerateBytes(bytes: *mut c_void, count: size_t) -> c_int;
-        }
-
-        let ret = unsafe { CCRandomGenerateBytes(v.as_mut_ptr().cast(), v.len()) };
-        if ret == -1 {
-            random_failure()
-        }
+        getentropy
+            .get()
+            .map(|f| {
+                // getentropy(2) permits a maximum buffer size of 256 bytes
+                for s in v.chunks_mut(256) {
+                    let ret = unsafe { f(s.as_mut_ptr() as *mut c_void, s.len()) };
+                    if ret == -1 {
+                        panic!("unexpected getentropy error: {}", errno());
+                    }
+                }
+                true
+            })
+            .unwrap_or(false)
     }
 
     pub fn fill_bytes(v: &mut [u8]) {
-        // All supported versions of macOS (10.12+) support getentropy.
-        //
-        // `getentropy` is measurably faster (via Divan) then the other alternatives so its preferred
-        // when usable.
-        #[cfg(target_os = "macos")]
-        getentropy_fill_bytes(v);
+        if getentropy_fill_bytes(v) {
+            return;
+        }
 
-        // On Apple platforms, `CCRandomGenerateBytes` and `SecRandomCopyBytes` simply
-        // call into `CCRandomCopyBytes` with `kCCRandomDefault`. `CCRandomCopyBytes`
-        // manages a CSPRNG which is seeded from the kernel's CSPRNG and which runs on
-        // its own thread accessed via GCD. This seems needlessly heavyweight for our purposes
-        // so we only use it on non-Mac OSes where the better entrypoints are blocked.
-        //
-        // `CCRandomGenerateBytes` is used instead of `SecRandomCopyBytes` because the former is accessible
-        // via `libSystem` (libc) while the other needs to link to `Security.framework`.
-        //
-        // Note that while `getentropy` has a available attribute in the macOS headers, the lack
-        // of a header in the iOS (and others) SDK means that its can cause app store rejections.
-        // Just use `CCRandomGenerateBytes` instead.
-        #[cfg(not(target_os = "macos"))]
-        ccrandom_fill_bytes(v);
+        // for older macos which doesn't support getentropy
+        let mut file = File::open("/dev/urandom").expect("failed to open /dev/urandom");
+        file.read_exact(v).expect("failed to read /dev/urandom")
     }
 }
 
