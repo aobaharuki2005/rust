@@ -35,4 +35,4 @@ python3 ./x.py build
 echo "====== STEP 3: Install and package ====="
 python3 ./x.py install
 cd build
-zip -qr 1.74.0-custom-crosscompiling.zip ./1.74.0-custom-crosscompiling
+zip -qr 1.74.0-custom-aarch64.zip ./1.74.0-custom-aarch64
