@@ -6,7 +6,7 @@ on:
 jobs:
   job0_buildjob:
     name: Build job
-    runs-on: macos-26
+    runs-on: macos-15
     steps:
       - name: Checkout code
         id: checkout
