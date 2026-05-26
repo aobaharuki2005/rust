@@ -33,7 +33,7 @@ jobs:
           cd ./bootstrap
           curl -L https://github.com/aobaharuki2005/rust/releases/download/1.74.0-custom/1.74.0-custom-crosscompiling.zip -o 1.74.0-custom-crosscompiling.zip
           unzip -q 1.74.0-custom-crosscompiling.zip
-          sudo chown -R $USER:$USER ./1.74.0-custom-crosscompiling
+          sudo chown -R $USER ./1.74.0-custom-crosscompiling
       
       - name: Build and package
         run: ./build.sh
