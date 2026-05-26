@@ -29,10 +29,10 @@ ln -sf ./config-legacy.toml ./config.toml
 echo "### Here is the build configuration:"
 cat ./config.toml
 echo "### Starting to build ..."
-python3 ./x.py build
+/usr/bin/python3 ./x.py build
 
 ### Install and package
 echo "====== STEP 3: Install and package ====="
-python3 ./x.py install
+/usr/bin/python3 ./x.py install
 cd build
 zip -qr 1.75.0-custom-crosscompiling.zip ./1.75.0-custom-crosscompiling
