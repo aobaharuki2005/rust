@@ -31,8 +31,8 @@ jobs:
         run: |
           mkdir ./bootstrap
           cd ./bootstrap
-          curl -L https://github.com/aobaharuki2005/rust/releases/download/1.74.0-custom/1.74.0-custom-crosscompiling.zip -o 1.74.0-custom-crosscompiling.zip
-          unzip -q 1.74.0-custom-crosscompiling.zip
+          curl -L https://github.com/aobaharuki2005/rust/releases/download/1.74.0-custom/1.74.0-custom-aarch64.zip -o 1.74.0-custom-aarch64.zip
+          unzip -q 1.74.0-custom-aarch64.zip
       
       - name: Build and package
         run: ./build.sh
@@ -51,7 +51,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with: 
           archive: false
-          path: build/1.75.0-custom-crosscompiling.zip
+          path: build/1.75.0-custom-aarch64.zip
 
 
 
