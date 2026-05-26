@@ -32,5 +32,5 @@ optimize = "s"
 codegen-tests = false
 
 [install]
-prefix = "build/1.74.0-custom-crosscompiling"
+prefix = "build/1.74.0-custom-aarch64"
 sysconfdir = "etc"
