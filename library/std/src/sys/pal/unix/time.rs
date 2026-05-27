@@ -123,6 +123,7 @@ impl Timespec {
         }
     }
 
+    #[allow(dead_code)]
     pub fn now(clock: libc::clockid_t) -> Timespec {
         use crate::mem::MaybeUninit;
         use crate::sys::cvt;
