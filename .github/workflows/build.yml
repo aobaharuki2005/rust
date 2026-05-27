@@ -17,15 +17,15 @@ jobs:
       - name: Select Xcode 16.0
         run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
 
-      - name: Restore cached LLVM 18 (Rust 1.78-1.81)
+      - name: Restore cached LLVM 19 (Rust 1.82-1.86)
         id: cache-llvm-restore
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
-          key: ${{ runner.os }}-llvm18-${{ github.run_id }}
+          key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
           restore-keys:
-            ${{ runner.os }}-llvm18
+            ${{ runner.os }}-llvm19
 
       - name: Manually bootstrapping custom Rust
         run: |
@@ -43,7 +43,7 @@ jobs:
         if: steps.cache-llvm-restore.outputs.cache-matched-key == ''
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          key: ${{ runner.os }}-llvm18-${{ github.run_id }}
+          key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
 
