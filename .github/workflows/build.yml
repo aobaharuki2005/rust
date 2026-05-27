@@ -1,0 +1,58 @@
+name: Build custom Rust
+
+on:
+  workflow_dispatch:
+
+jobs:
+  job0_buildjob:
+    name: Build job
+    runs-on: macos-15
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+
+      - name: Select Xcode 16.0
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Restore cached LLVM 17 (Rust 1.78-1.81)
+        id: cache-llvm-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm18-${{ github.run_id }}
+          path: |
+            build/aarch64-apple-darwin/llvm
+          restore-keys:
+            ${{ runner.os }}-llvm18-
+
+      - name: Download bootstrapping Rust 1.77.2-custom
+        run: |
+          mkdir /tmp/bootstrap
+          cd /tmp/bootstrap
+          curl -L https://github.com/aobaharuki2005/rust/releases/download/1.77.2-custom/1.77.2-custom-aarch64.zip -o 1.77.2-custom-aarch64.zip
+          unzip -q 1.77.2-custom-aarch64.zip
+      
+      - name: Build and package
+        run: ./build.sh
+
+      - name: Save built LLVM artifacts if it was not reused
+        id: cache-llvm-save
+        if: steps.cache-llvm-restore.outputs.cache-matched-key == ''
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm17-${{ github.run_id }}
+          path: |
+            build/aarch64-apple-darwin/llvm
+          
+      - name: Upload packaged Rust
+        id: upload_packaged_rust
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: build/1.78.0-custom-aarch64.zip
+
+
+
+
