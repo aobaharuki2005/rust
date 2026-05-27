@@ -1,8 +1,8 @@
 # Based on src/bootstrap/defaults/bootstrap.dists.toml
 
 [build]
-host = [ "aarch64-apple-darwin" ]
-target = [ "aarch64-apple-darwin" ]
+host = [ "x86_64-apple-darwin" ]
+target = [ "x86_64-apple-darwin" ]
 docs = false
 extended = true
 
