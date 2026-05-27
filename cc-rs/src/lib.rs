@@ -253,6 +253,7 @@ use tool::ToolFamily;
 /// various configuration options and such of a compile. You'll find more
 /// documentation on each method itself.
 #[derive(Clone, Debug)]
+#[allow(rustc::default_hash_types)]
 pub struct Build {
     include_directories: Vec<Arc<Path>>,
     definitions: Vec<(Arc<str>, Option<Arc<str>>)>,
@@ -365,6 +366,7 @@ impl Object {
     }
 }
 
+#[allow(rustc::default_hash_types)]
 impl Build {
     /// Construct a new instance of a blank set of configuration.
     ///
