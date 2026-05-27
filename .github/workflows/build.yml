@@ -35,7 +35,7 @@ jobs:
           unzip -q 1.77.2-custom-aarch64.zip
       
       - name: Build and package
-        run: ./build.sh
+        run: chmod +x ./build.sh && ./build.sh
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
