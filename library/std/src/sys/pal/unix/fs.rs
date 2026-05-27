@@ -853,6 +853,7 @@ impl Drop for Dir {
             target_os = "fuchsia",
             target_os = "horizon",
             target_os = "vxworks",
+            target_os = "macos",
         )))]
         {
             let fd = unsafe { libc::dirfd(self.0) };
@@ -1964,7 +1965,7 @@ pub fn chroot(dir: &Path) -> io::Result<()> {
 
 pub use remove_dir_impl::remove_dir_all;
 
-// Fallback for REDOX, ESP-ID, Horizon, Vita, Vxworks and Miri
+// Fallback for REDOX, ESP-ID, Horizon, Vita, Vxworks and Miri and macOS (10.7-10.9)
 #[cfg(any(
     target_os = "redox",
     target_os = "espidf",
@@ -1972,6 +1973,7 @@ pub use remove_dir_impl::remove_dir_all;
     target_os = "vita",
     target_os = "nto",
     target_os = "vxworks",
+    target_os = "macos",
     miri
 ))]
 mod remove_dir_impl {
@@ -1986,6 +1988,7 @@ mod remove_dir_impl {
     target_os = "vita",
     target_os = "nto",
     target_os = "vxworks",
+    target_os = "macos",
     miri
 )))]
 mod remove_dir_impl {
