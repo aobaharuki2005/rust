@@ -178,7 +178,6 @@ mod imp {
 }
 
 #[cfg(any(
-    target_os = "macos", // Supported since macOS 10.12+.
     target_os = "openbsd",
     target_os = "emscripten",
     target_os = "vita",
@@ -186,8 +185,11 @@ mod imp {
 mod imp {
     use crate::io::{Error, Result};
 
+    // getentropy(2) is available on OpenBSD, Emscripten, and Vita.
+    // On macOS, getentropy was only introduced in 10.12 Sierra; the macOS path
+    // is handled separately below using arc4random_buf.
     pub fn syscall(v: &mut [u8]) -> Result<()> {
-        // getentropy(2) permits a maximum buffer size of 256 bytes
+        // getentropy(2) permits a maximum buffer size of 256 bytes.
         for s in v.chunks_mut(256) {
             let ret = unsafe { libc::getentropy(s.as_mut_ptr().cast(), s.len()) };
             if ret == -1 {
@@ -195,6 +197,19 @@ mod imp {
             }
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod imp {
+    use crate::io::Result;
+
+    // arc4random_buf(3) has been available on macOS since 10.7 Lion and is
+    // seeded directly by the kernel.  It carries no 256-byte buffer limit and
+    // never returns an error, so no chunking or error handling is required.
+    pub fn syscall(v: &mut [u8]) -> Result<()> {
+        unsafe { libc::arc4random_buf(v.as_mut_ptr().cast(), v.len()) };
         Ok(())
     }
 }
