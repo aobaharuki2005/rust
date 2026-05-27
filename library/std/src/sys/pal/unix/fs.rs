@@ -1026,6 +1026,7 @@ impl DirEntry {
         target_os = "vita",
         target_os = "hurd",
     )))]
+    #[allow(dead_code)]
     fn name_cstr(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.entry.d_name.as_ptr()) }
     }
