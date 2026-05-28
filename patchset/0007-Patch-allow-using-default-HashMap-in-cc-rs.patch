@@ -1,0 +1,79 @@
+From 9bd149d97f3186e9f7fff906277ae583c74df896 Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Thu, 28 May 2026 04:30:32 +0700
+Subject: [PATCH 07/13] Patch: allow using default HashMap in cc-rs
+
+---
+ cc-rs/src/lib.rs                | 2 ++
+ cc-rs/src/tool.rs               | 1 +
+ src/bootstrap/cc-rs/src/lib.rs  | 2 ++
+ src/bootstrap/cc-rs/src/tool.rs | 1 +
+ 4 files changed, 6 insertions(+)
+
+diff --git a/cc-rs/src/lib.rs b/cc-rs/src/lib.rs
+index ea4f9ac69ad..b818e524e1b 100644
+--- a/cc-rs/src/lib.rs
++++ b/cc-rs/src/lib.rs
+@@ -258,6 +258,7 @@ struct CompilerFlag {
+ /// various configuration options and such of a compile. You'll find more
+ /// documentation on each method itself.
+ #[derive(Clone, Debug)]
++#[allow(rustc::default_hash_types)]
+ pub struct Build {
+     include_directories: Vec<Arc<Path>>,
+     definitions: Vec<(Arc<str>, Option<Arc<str>>)>,
+@@ -375,6 +376,7 @@ fn new(src: PathBuf, dst: PathBuf) -> Object {
+     }
+ }
+ 
++#[allow(rustc::default_hash_types)]
+ impl Build {
+     /// Construct a new instance of a blank set of configuration.
+     ///
+diff --git a/cc-rs/src/tool.rs b/cc-rs/src/tool.rs
+index 72fc23b5445..21e02cf4f01 100644
+--- a/cc-rs/src/tool.rs
++++ b/cc-rs/src/tool.rs
+@@ -25,6 +25,7 @@
+ /// compiler itself.
+ #[derive(Clone, Debug)]
+ #[allow(missing_docs)]
++#[allow(rustc::default_hash_types)]
+ pub struct Tool {
+     pub(crate) path: PathBuf,
+     pub(crate) cc_wrapper_path: Option<PathBuf>,
+diff --git a/src/bootstrap/cc-rs/src/lib.rs b/src/bootstrap/cc-rs/src/lib.rs
+index d7122aec1e2..c33d003e985 100644
+--- a/src/bootstrap/cc-rs/src/lib.rs
++++ b/src/bootstrap/cc-rs/src/lib.rs
+@@ -262,6 +262,7 @@ struct CompilerFlag {
+ /// various configuration options and such of a compile. You'll find more
+ /// documentation on each method itself.
+ #[derive(Clone, Debug)]
++#[allow(rustc::default_hash_types)]
+ pub struct Build {
+     include_directories: Vec<Arc<Path>>,
+     definitions: Vec<(Arc<str>, Option<Arc<str>>)>,
+@@ -378,6 +379,7 @@ fn new(src: PathBuf, dst: PathBuf) -> Object {
+     }
+ }
+ 
++#[allow(rustc::default_hash_types)]
+ impl Build {
+     /// Construct a new instance of a blank set of configuration.
+     ///
+diff --git a/src/bootstrap/cc-rs/src/tool.rs b/src/bootstrap/cc-rs/src/tool.rs
+index 850065800b5..90724d4012e 100644
+--- a/src/bootstrap/cc-rs/src/tool.rs
++++ b/src/bootstrap/cc-rs/src/tool.rs
+@@ -37,6 +37,7 @@ pub struct Tool {
+     pub(crate) has_internal_target_arg: bool,
+ }
+ 
++#[allow(rustc::default_hash_types)]
+ impl Tool {
+     pub(crate) fn new(
+         path: PathBuf,
+-- 
+2.50.1 (Apple Git-155)
+

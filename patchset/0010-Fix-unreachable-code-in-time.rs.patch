@@ -1,0 +1,24 @@
+From 030b40fb940a4b5f1952f66a92000c623216137e Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Thu, 28 May 2026 05:21:39 +0700
+Subject: [PATCH 10/13] Fix: unreachable code in time.rs
+
+---
+ library/std/src/sys/pal/unix/time.rs | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/library/std/src/sys/pal/unix/time.rs b/library/std/src/sys/pal/unix/time.rs
+index a1fd2cb6035..b4e6f44308f 100644
+--- a/library/std/src/sys/pal/unix/time.rs
++++ b/library/std/src/sys/pal/unix/time.rs
+@@ -123,6 +123,7 @@ const fn new(tv_sec: i64, tv_nsec: i64) -> Result<Timespec, io::Error> {
+         }
+     }
+ 
++    #[allow(dead_code)]
+     pub fn now(clock: libc::clockid_t) -> Timespec {
+         use crate::mem::MaybeUninit;
+         use crate::sys::cvt;
+-- 
+2.50.1 (Apple Git-155)
+

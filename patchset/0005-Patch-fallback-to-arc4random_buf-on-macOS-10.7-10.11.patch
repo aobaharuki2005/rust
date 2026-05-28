@@ -1,0 +1,12 @@
+diff --git a/library/std/src/sys/random/apple.rs b/library/std/src/sys/random/apple.rs
+index 417198c9d85..ec2e7051140 100644
+--- a/library/std/src/sys/random/apple.rs
++++ b/library/std/src/sys/random/apple.rs
+@@ -10,6 +10,5 @@
+ //! proven to be App Store-compatible.
+ 
+ pub fn fill_bytes(bytes: &mut [u8]) {
+-    let ret = unsafe { libc::CCRandomGenerateBytes(bytes.as_mut_ptr().cast(), bytes.len()) };
+-    assert_eq!(ret, libc::kCCSuccess, "failed to generate random data");
++    unsafe { arc4random_buf(bytes.as_mut_ptr().cast(), bytes.len()) }
+ }

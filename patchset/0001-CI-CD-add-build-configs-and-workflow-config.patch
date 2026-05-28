@@ -1,0 +1,168 @@
+From 483bbf3c88fc59be6620ea4f9083156980bba2a4 Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Wed, 27 May 2026 22:23:23 +0700
+Subject: [PATCH 01/13] CI/CD: add build configs and workflow config
+
+---
+ .github/workflows/build.yml | 62 +++++++++++++++++++++++++++++++++++++
+ build.sh                    | 33 ++++++++++++++++++++
+ config-legacy.toml          | 38 +++++++++++++++++++++++
+ 3 files changed, 133 insertions(+)
+ create mode 100644 .github/workflows/build.yml
+ create mode 100755 build.sh
+ create mode 100644 config-legacy.toml
+
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+new file mode 100644
+index 00000000000..42bfa43da68
+--- /dev/null
++++ b/.github/workflows/build.yml
+@@ -0,0 +1,62 @@
++name: Build custom Rust
++
++on:
++  workflow_dispatch:
++
++jobs:
++  job0_buildjob:
++    name: Build job
++    runs-on: macos-15
++    steps:
++      - name: Checkout code
++        id: checkout
++        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
++        with:
++          fetch-depth: 1
++
++      - name: Select Xcode 16.0
++        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
++
++      - name: Restore cached LLVM 18 (Rust 1.78-1.81)
++        id: cache-llvm-restore
++        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
++        with:
++          key: ${{ runner.os }}-llvm18-${{ github.run_id }}
++          path: |
++            build/aarch64-apple-darwin/llvm
++          restore-keys:
++            ${{ runner.os }}-llvm18
++
++      - name: Manually bootstrapping custom Rust
++        run: |
++          export RUST_BOOTSTRAP_VERSION=1.82.0
++          mkdir /tmp/bootstrap
++          cd /tmp/bootstrap
++          curl -L https://github.com/aobaharuki2005/rust/releases/download/${RUST_BOOTSTRAP_VERSION}-custom/${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip -o ${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip
++          unzip -q ${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip
++      
++      - name: Build and package
++        run: ./build.sh
++
++      - name: Save built LLVM artifacts if it was not reused
++        id: cache-llvm-save
++        if: steps.cache-llvm-restore.outputs.cache-matched-key == ''
++        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
++        with:
++          key: ${{ runner.os }}-llvm18-${{ github.run_id }}
++          path: |
++            build/aarch64-apple-darwin/llvm
++
++      - name: Get Rust version
++        run: echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
++          
++      - name: Upload packaged Rust
++        id: upload_packaged_rust
++        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
++        with: 
++          archive: false
++          path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
++
++
++
++
+diff --git a/build.sh b/build.sh
+new file mode 100755
+index 00000000000..53d721f4e1d
+--- /dev/null
++++ b/build.sh
+@@ -0,0 +1,33 @@
++#!/bin/zsh
++
++### Setting up environment variables
++export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk
++export MACOSX_DEPLOYMENT_TARGET=10.7  # only needed if building targeted Rust toolchain
++export MACOSX_STD_DEPLOYMENT_TARGET=10.7  # only needed if building targeted Rust toolchain
++export LDFLAGS="-ld_classic"
++export VERSION=$(cat src/version)
++
++### Check if environment variables have been correctly set up
++echo "### Build environment variables: "
++printenv | grep -E "SDKROOT|MACOSX|LDFLAGS|VERSION"
++
++### Shallow synchronize submodules
++echo "====== STEP 1: Fetch submodules ====="
++echo "### Fetching ..."
++git submodule update --depth 1 --init --recursive
++
++### Build Rustc and cargo
++echo "====== STEP 2: Build Rustc and cargo ====="
++echo "### Symlink the configuration"
++ln -sf ./config-legacy.toml ./config.toml
++echo "### Here is the build configuration:"
++cat ./config.toml
++echo "### Starting to build ..."
++/usr/bin/python3 ./x.py build
++
++### Install and package
++echo "====== STEP 3: Install and package ====="
++/usr/bin/python3 ./x.py install
++cd build
++
++zip -qr $VERSION-custom-aarch64.zip ./$VERSION-custom-aarch64
+diff --git a/config-legacy.toml b/config-legacy.toml
+new file mode 100644
+index 00000000000..2f593880b74
+--- /dev/null
++++ b/config-legacy.toml
+@@ -0,0 +1,38 @@
++# Based on src/bootstrap/defaults/bootstrap.dists.toml
++
++[build]
++host = [ "aarch64-apple-darwin" ]
++target = [ "aarch64-apple-darwin", "x86_64-apple-darwin" ]
++docs = false
++extended = true
++
++### In case of using custom built Rust, uncomment and modify these line
++rustc = "/tmp/bootstrap/1.82.0-custom-aarch64/bin/rustc"
++cargo = "/tmp/bootstrap/1.82.0-custom-aarch64/bin/cargo"
++
++submodules = false
++tools = [ "cargo" ]
++cargo-native-static = true
++
++[target.aarch64-apple-darwin]
++llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
++
++[target.x86_64-apple-darwin]
++llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
++
++[llvm]
++download-ci-llvm = false
++libzstd = false   # available since Rust 1.82.0
++static-libstdcpp = true
++targets = "X86;AArch64"
++experimental-targets = ""
++
++
++[rust]
++channel = "dev"
++optimize = "s"
++codegen-tests = false
++
++[install]
++prefix = "build/1.82.0-custom-aarch64"
++sysconfdir = "etc"
+-- 
+2.50.1 (Apple Git-155)
+

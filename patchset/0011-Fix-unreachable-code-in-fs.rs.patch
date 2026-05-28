@@ -1,0 +1,24 @@
+From 10afa9a3032e4718330fba3cf4e8c6c167f1267b Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Thu, 28 May 2026 05:21:54 +0700
+Subject: [PATCH 11/13] Fix: unreachable code in fs.rs
+
+---
+ library/std/src/sys/pal/unix/fs.rs | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/library/std/src/sys/pal/unix/fs.rs b/library/std/src/sys/pal/unix/fs.rs
+index 8f2d60699e3..98e52fe85b5 100644
+--- a/library/std/src/sys/pal/unix/fs.rs
++++ b/library/std/src/sys/pal/unix/fs.rs
+@@ -1026,6 +1026,7 @@ fn name_bytes(&self) -> &[u8] {
+         target_os = "vita",
+         target_os = "hurd",
+     )))]
++    #[allow(dead_code)]
+     fn name_cstr(&self) -> &CStr {
+         unsafe { CStr::from_ptr(self.entry.d_name.as_ptr()) }
+     }
+-- 
+2.50.1 (Apple Git-155)
+

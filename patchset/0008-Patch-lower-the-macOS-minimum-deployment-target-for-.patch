@@ -1,0 +1,40 @@
+From 476af69f097ec83c9208b97cde59cc6b17d4c2c2 Mon Sep 17 00:00:00 2001
+From: aobaharuki2005 <tranbaohnth@outlook.com>
+Date: Thu, 28 May 2026 04:31:47 +0700
+Subject: [PATCH 08/13] Patch: lower the macOS minimum deployment target for
+ cc-rs to 10.7
+
+---
+ cc-rs/src/lib.rs               | 2 +-
+ src/bootstrap/cc-rs/src/lib.rs | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/cc-rs/src/lib.rs b/cc-rs/src/lib.rs
+index b818e524e1b..7a06804d2c4 100644
+--- a/cc-rs/src/lib.rs
++++ b/cc-rs/src/lib.rs
+@@ -3855,7 +3855,7 @@ fn apple_deployment_version(&self, os: AppleOs, arch_str: Option<&str>, sdk: &st
+                     let minor = deployment_target.next().unwrap_or(0);
+ 
+                     // If below 10.9, we ignore it and let the SDK's target definitions handle it.
+-                    if major == 10 && minor < 9 {
++                    if major == 10 && minor < 7 {
+                         self.cargo_output.print_warning(&format_args!(
+                             "macOS deployment target ({}) too low, it will be increased",
+                             deployment_target_ver
+diff --git a/src/bootstrap/cc-rs/src/lib.rs b/src/bootstrap/cc-rs/src/lib.rs
+index c33d003e985..cea6aa10aa5 100644
+--- a/src/bootstrap/cc-rs/src/lib.rs
++++ b/src/bootstrap/cc-rs/src/lib.rs
+@@ -3785,7 +3785,7 @@ fn apple_deployment_version(&self, os: AppleOs, arch_str: Option<&str>, sdk: &st
+                     let minor = deployment_target.next().unwrap_or(0);
+ 
+                     // If below 10.9, we ignore it and let the SDK's target definitions handle it.
+-                    if major == 10 && minor < 9 {
++                    if major == 10 && minor < 7 {
+                         self.cargo_output.print_warning(&format_args!(
+                             "macOS deployment target ({}) too low, it will be increased",
+                             deployment_target_ver
+-- 
+2.50.1 (Apple Git-155)
+

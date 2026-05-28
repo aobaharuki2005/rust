@@ -1,0 +1,28 @@
+diff --git a/library/std/src/sys/pal/unix/fs.rs b/library/std/src/sys/pal/unix/fs.rs
+index 39aabf0b2d6..e7567491dcd 100644
+--- a/library/std/src/sys/pal/unix/fs.rs
++++ b/library/std/src/sys/pal/unix/fs.rs
+@@ -869,6 +869,7 @@ fn drop(&mut self) {
+             target_os = "vxworks",
+             target_os = "rtems",
+             target_os = "nuttx",
++            target_os = "macos",
+         )))]
+         {
+             let fd = unsafe { libc::dirfd(self.0) };
+@@ -1997,6 +1998,7 @@ pub fn chroot(dir: &Path) -> io::Result<()> {
+     target_os = "vita",
+     target_os = "nto",
+     target_os = "vxworks",
++    target_os = "macos",
+     miri
+ ))]
+ mod remove_dir_impl {
+@@ -2011,6 +2013,7 @@ mod remove_dir_impl {
+     target_os = "vita",
+     target_os = "nto",
+     target_os = "vxworks",
++    target_os = "macos",
+     miri
+ )))]
+ mod remove_dir_impl {
