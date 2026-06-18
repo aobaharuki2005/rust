@@ -88,7 +88,7 @@ jobs:
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
-        if: steps.cache-llvm-restore.outputs.cache-matched-key == ''
+        if: failure() || steps.cache-llvm-restore.outputs.cache-matched-key == ''
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
