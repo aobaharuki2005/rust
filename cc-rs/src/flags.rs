@@ -163,7 +163,7 @@ impl<'this> RustcCodegenFlags<'this> {
         build: &Build,
         path: &Path,
         family: ToolFamily,
-        target: &TargetInfo,
+        target: &TargetInfo<'_>,
         flags: &mut Vec<OsString>,
     ) {
         // Push `flag` to `flags` if it is supported by the currently used CC
