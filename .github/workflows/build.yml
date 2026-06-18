@@ -68,12 +68,13 @@ jobs:
           echo "====== STEP 2: Build Rustc and cargo ====="
           if [ ! -e "build/aarch64-apple-darwin/llvm/bin/llvm-config" ]; then
             echo "***** No cached LLVM found. Building LLVM ... *****"
+            ln -sf ./config-legacy-nocachedllvm.toml ./config.toml
             python3 ./x.py build --stage 2 src/llvm-project
           else
             echo "***** Found LLVM cache! *****"
           fi 
           echo "------ Symlink the configuration"
-          ln -sf ./config-legacy.toml ./config.toml
+          ln -sf ./config-legacy-cachedllvm.toml ./config.toml
           echo "------ Here is the build configuration:"
           cat ./config.toml
           echo "***** Building Rust ... *****"
