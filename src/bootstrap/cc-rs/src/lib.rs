@@ -214,6 +214,7 @@
 #![deny(missing_docs)]
 #![deny(clippy::disallowed_methods)]
 #![warn(clippy::doc_markdown)]
+#![allow(rustc::default_hash_types)]
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -3927,7 +3928,7 @@ impl Build {
                     let minor = deployment_target.next().unwrap_or(0);
 
                     // If below 10.9, we ignore it and let the SDK's target definitions handle it.
-                    if major == 10 && minor < 9 {
+                    if major == 10 && minor < 7 {
                         self.cargo_output.print_warning(&format_args!(
                             "macOS deployment target ({}) too low, it will be increased",
                             deployment_target_ver
