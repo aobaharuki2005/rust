@@ -1,0 +1,38 @@
+# Based on src/bootstrap/defaults/bootstrap.dists.toml
+
+[build]
+host = [ "aarch64-apple-darwin" ]
+target = [ "aarch64-apple-darwin", "x86_64-apple-darwin" ]
+docs = false
+extended = true
+
+### In case of using custom built Rust, uncomment and modify these line
+rustc = "/tmp/bootstrap/1.85.1-custom-aarch64/bin/rustc"
+cargo = "/tmp/bootstrap/1.85.1-custom-aarch64/bin/cargo"
+
+submodules = false
+tools = [ "cargo" ]
+cargo-native-static = true
+
+# [target.aarch64-apple-darwin]
+# llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
+
+# [target.x86_64-apple-darwin]
+# llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
+
+[llvm]
+download-ci-llvm = false
+libzstd = false   # available since Rust 1.82.0
+static-libstdcpp = true
+targets = "X86;AArch64"
+experimental-targets = ""
+
+
+[rust]
+channel = "dev"
+optimize = "s"
+codegen-tests = false
+
+[install]
+prefix = "build/1.86.0-custom-aarch64"
+sysconfdir = "etc"
