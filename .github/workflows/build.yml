@@ -3,7 +3,7 @@ name: Build custom Rust
 on:
   push:
     branches:
-      - 'testing*'
+      - 'testing'
 
 jobs:
   job0_buildjob:
