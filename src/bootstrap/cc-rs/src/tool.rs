@@ -37,7 +37,6 @@ pub struct Tool {
     pub(crate) has_internal_target_arg: bool,
 }
 
-#[allow(rustc::default_hash_types)]
 impl Tool {
     pub(crate) fn new(
         path: PathBuf,
