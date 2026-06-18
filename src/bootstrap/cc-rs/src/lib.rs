@@ -214,6 +214,7 @@
 #![deny(missing_docs)]
 #![deny(clippy::disallowed_methods)]
 #![warn(clippy::doc_markdown)]
+#![allow(rustc::default_hash_types)]
 
 use std::borrow::Cow;
 use std::collections::HashMap;
