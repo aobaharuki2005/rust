@@ -25,6 +25,7 @@ use crate::{
 /// compiler itself.
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
+#[allow(rustc::default_hash_types)]
 pub struct Tool {
     pub(crate) path: PathBuf,
     pub(crate) cc_wrapper_path: Option<PathBuf>,
@@ -37,6 +38,7 @@ pub struct Tool {
     pub(crate) has_internal_target_arg: bool,
 }
 
+#[allow(rustc::default_hash_types)]
 impl Tool {
     pub(crate) fn new(
         path: PathBuf,
