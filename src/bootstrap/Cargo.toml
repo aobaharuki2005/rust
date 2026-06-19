@@ -28,6 +28,9 @@ name = "rustdoc"
 path = "src/bin/rustdoc.rs"
 test = false
 
+[patch.crates-io]
+cc = { path = "cc-rs" }
+
 [dependencies]
 # Most of the time updating these dependencies requires modifications to the
 # bootstrap codebase(e.g., https://github.com/rust-lang/rust/issues/124565);
