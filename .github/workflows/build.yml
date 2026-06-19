@@ -86,7 +86,7 @@ jobs:
           echo "====== STEP 3: Install and package ====="
           python3 ./x.py install
           cd build
-          zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
+          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
@@ -102,17 +102,17 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with: 
           archive: false
-          path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RUST_VERSION }}-custom
+          tag_name: ${{ env.RUST_VERSION }}-custom-x86_64
           target_commitish: ${{ github.sha }} 
-          name: ${{ env.RUST_VERSION }}-custom
-          files: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+          name: ${{ env.RUST_VERSION }}-custom-x86_64
+          files: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
           draft: false
-          prerelease: false
+          prerelease: true
 
 
 
