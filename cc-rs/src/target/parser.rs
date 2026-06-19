@@ -102,7 +102,7 @@ impl TargetInfoParserInner {
 pub(crate) struct TargetInfoParser(OnceLock<Result<TargetInfoParserInner, Error>>);
 
 impl TargetInfoParser {
-    pub fn parse_from_cargo_environment_variables(&self) -> Result<TargetInfo<'_>, Error> {
+    pub(crate) fn parse_from_cargo_environment_variables(&self) -> Result<TargetInfo<'_>, Error> {
         match self
             .0
             .get_or_init(TargetInfoParserInner::from_cargo_environment_variables)
