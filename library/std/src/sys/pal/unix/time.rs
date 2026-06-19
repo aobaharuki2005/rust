@@ -324,7 +324,7 @@ mod macos_instant {
         denom: u32,
     }
 
-    extern "C" {
+    unsafe extern "C" {
         fn mach_absolute_time() -> u64;
         fn mach_timebase_info(info: *mut MachTimebaseInfo) -> libc::c_int;
     }
