@@ -93,3 +93,5 @@ codegen-units = 1
 # For git dependencies, also add your source to ALLOWED_SOURCES in src/tools/tidy/src/extdeps.rs.
 #[patch.crates-io]
 
+[patch.crates-io]
+cc = { path = "cc-rs" }
