@@ -47,8 +47,8 @@ jobs:
         run: |
           ### Setting up environment variables
           export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk
-          export MACOSX_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
-          export MACOSX_STD_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
+          export MACOSX_DEPLOYMENT_TARGET=10.7    # for cross-compiling build only
+          export MACOSX_STD_DEPLOYMENT_TARGET=10.7    # for cross-compiling build only
           export LDFLAGS="-ld_classic"
 
           ### Check if environment variables have been correctly set up
