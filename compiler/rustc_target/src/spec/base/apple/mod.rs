@@ -65,8 +65,8 @@ impl Arch {
             // Only macOS 10.12+ is supported, which means
             // all x86_64/x86 CPUs must be running at least penryn
             // https://github.com/llvm/llvm-project/blob/01f924d0e37a5deae51df0d77e10a15b63aa0c0f/clang/lib/Driver/ToolChains/Arch/X86.cpp#L79-L82
-            I386 | I686 => "penryn",
-            X86_64 => "penryn",
+            I386 | I686 => "core2",
+            X86_64 => "core2",
             // Note: `core-avx2` is slightly more advanced than `x86_64h`, see
             // comments (and disabled features) in `x86_64h_apple_darwin` for
             // details. It is a higher baseline then `penryn` however.
@@ -123,7 +123,7 @@ pub(crate) fn base(
         // LLVM notes that macOS 10.11+ and iOS 9+ default
         // to v4, so we do the same.
         // https://github.com/llvm/llvm-project/blob/378778a0d10c2f8d5df8ceff81f95b6002984a4b/clang/lib/Driver/ToolChains/Darwin.cpp#L1203
-        default_dwarf_version: 4,
+        default_dwarf_version: 2,
         frame_pointer: match arch {
             // clang ignores `-fomit-frame-pointer` for Armv7, it only accepts `-momit-leaf-frame-pointer`
             Armv7k | Armv7s => FramePointer::Always,
@@ -291,7 +291,7 @@ impl OSVersion {
         // $ rustc --print deployment-target
         // ```
         let (major, minor, patch) = match os {
-            "macos" => (10, 12, 0),
+            "macos" => (10, 7, 0),
             "ios" => (10, 0, 0),
             "tvos" => (10, 0, 0),
             "watchos" => (5, 0, 0),
