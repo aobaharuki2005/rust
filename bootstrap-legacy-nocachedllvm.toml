@@ -7,8 +7,8 @@ docs = false
 extended = true
 
 ### In case of using custom built Rust, uncomment and modify these line
-rustc = "/tmp/bootstrap/1.85.1-custom-aarch64/bin/rustc"
-cargo = "/tmp/bootstrap/1.85.1-custom-aarch64/bin/cargo"
+rustc = "/tmp/bootstrap/1.86.0-custom-aarch64/bin/rustc"
+cargo = "/tmp/bootstrap/1.86.0-custom-aarch64/bin/cargo"
 
 submodules = false
 tools = [ "cargo" ]
@@ -34,5 +34,5 @@ optimize = "s"
 codegen-tests = false
 
 [install]
-prefix = "build/1.86.0-custom-aarch64"
+prefix = "build/1.87.0-custom-aarch64"
 sysconfdir = "etc"
