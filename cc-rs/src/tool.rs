@@ -460,7 +460,7 @@ impl Tool {
 ///
 /// Detection of a family is done on best-effort basis and may not accurately reflect the tool.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ToolFamily {
+pub(crate) enum ToolFamily {
     /// Tool is GNU Compiler Collection-like.
     Gnu,
     /// Tool is Clang-like. It differs from the GCC in a sense that it accepts superset of flags
