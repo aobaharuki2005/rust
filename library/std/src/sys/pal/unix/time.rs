@@ -399,7 +399,7 @@ mod macos_instant {
 #[cfg(not(target_os = "macos"))]
 impl Instant {
     #[cfg(target_vendor = "apple")]
-    pub(crate) const CLOCK_ID: libc::clockid_t = 0;
+    pub(crate) const CLOCK_ID: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
     #[cfg(not(target_vendor = "apple"))]
     pub(crate) const CLOCK_ID: libc::clockid_t = libc::CLOCK_MONOTONIC;
     pub fn now() -> Instant {
@@ -415,7 +415,7 @@ impl Instant {
         // Instant on macos was historically implemented using mach_absolute_time;
         // we preserve this value domain out of an abundance of caution.
         #[cfg(target_vendor = "apple")]
-        const CLOCK_ID: libc::clockid_t = 0;
+        const CLOCK_ID: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
         #[cfg(not(target_vendor = "apple"))]
         const CLOCK_ID: libc::clockid_t = libc::CLOCK_MONOTONIC;
         Instant { t: Timespec::now(CLOCK_ID) }
