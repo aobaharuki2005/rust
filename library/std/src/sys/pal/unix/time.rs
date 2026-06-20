@@ -130,9 +130,6 @@ impl Timespec {
     }
 
     pub fn now(clock: libc::clockid_t) -> Timespec {
-        use crate::mem::MaybeUninit;
-        use crate::sys::cvt;
-
         #[cfg(target_vendor = "apple")]
         {
             if clock == libc::CLOCK_REALTIME {
