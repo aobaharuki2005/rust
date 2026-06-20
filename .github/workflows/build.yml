@@ -47,8 +47,8 @@ jobs:
         run: |
           ### Setting up environment variables
           export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk
-          export MACOSX_DEPLOYMENT_TARGET=10.7    # for cross-compiling build only
-          export MACOSX_STD_DEPLOYMENT_TARGET=10.7    # for cross-compiling build only
+          export MACOSX_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
+          export MACOSX_STD_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
           export LDFLAGS="-ld_classic"
 
           ### Check if environment variables have been correctly set up
@@ -68,15 +68,15 @@ jobs:
 
           ### Build Rustc and cargo
           echo "====== STEP 2: Build Rustc and cargo ====="
-          # if [ ! -e "build/aarch64-apple-darwin/llvm/bin/llvm-config" ]; then
-          #   echo "***** No cached LLVM found. Building LLVM ... *****"
+          if [ ! -e "build/aarch64-apple-darwin/llvm/bin/llvm-config" ]; then
+            echo "***** No cached LLVM found. Building LLVM ... *****"
             ln -sf ./bootstrap-legacy-nocachedllvm.toml ./bootstrap.toml
-          #   python3 ./x.py build --stage 2 src/llvm-project
-          # else
-          #   echo "***** Found LLVM cache! *****"
-          # fi 
-          # echo "------ Symlink the configuration"
-          # ln -sf ./bootstrap-legacy-cachedllvm.toml ./bootstrap.toml
+            python3 ./x.py build --stage 2 src/llvm-project
+          else
+            echo "***** Found LLVM cache! *****"
+          fi 
+          echo "------ Symlink the configuration"
+          ln -sf ./bootstrap-legacy-cachedllvm.toml ./bootstrap.toml
           echo "------ Here is the build configuration:"
           cat ./bootstrap.toml
           echo "***** Building Rust ... *****"
@@ -86,7 +86,7 @@ jobs:
           echo "====== STEP 3: Install and package ====="
           python3 ./x.py install
           cd build
-          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
+          zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
@@ -102,17 +102,17 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with: 
           archive: false
-          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
+          path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RUST_VERSION }}-custom-x86_64
+          tag_name: ${{ env.RUST_VERSION }}-custom
           target_commitish: ${{ github.sha }} 
-          name: ${{ env.RUST_VERSION }}-custom-x86_64
-          files: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
+          name: ${{ env.RUST_VERSION }}-custom
+          files: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
           draft: false
-          prerelease: true
+          prerelease: false
 
 
 
