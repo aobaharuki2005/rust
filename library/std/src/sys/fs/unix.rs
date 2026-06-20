@@ -1897,7 +1897,7 @@ pub fn symlink(original: &CStr, link: &CStr) -> io::Result<()> {
 
 pub fn link(original: &CStr, link: &CStr) -> io::Result<()> {
     cfg_if::cfg_if! {
-        if #[cfg(any(target_os = "vxworks", target_os = "redox", target_os = "android", target_os = "espidf", target_os = "horizon", target_os = "vita", target_env = "nto70"))] {
+        if #[cfg(any(target_os = "vxworks", target_os = "redox", target_os = "android", target_os = "espidf", target_os = "horizon", target_os = "vita", target_env = "nto70", target_os = "macos"))] {
             // VxWorks, Redox and ESP-IDF lack `linkat`, so use `link` instead. POSIX leaves
             // it implementation-defined whether `link` follows symlinks, so rely on the
             // `symlink_hard_link` test in library/std/src/fs/tests.rs to check the behavior.
