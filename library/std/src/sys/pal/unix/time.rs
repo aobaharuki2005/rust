@@ -14,7 +14,6 @@ mod mach {
         pub denom: u32,
     }
 
-    // Thêm từ khóa unsafe ở đây
     unsafe extern "C" {
         pub fn mach_absolute_time() -> u64;
         pub fn mach_timebase_info(info: *mut mach_timebase_info) -> libc::c_int;
@@ -141,7 +140,6 @@ impl Timespec {
                 unsafe { mach::gettimeofday(&mut tv, crate::ptr::null_mut()); }
                 return Timespec::new(tv.tv_sec as i64, (tv.tv_usec as i64) * 1000).unwrap();
             } else {
-                // Giả định là CLOCK_MONOTONIC hoặc UPTIME_RAW
                 let info = mach::get_timebase();
                 let raw = unsafe { mach::mach_absolute_time() };
                 let nsecs = raw as u128 * info.numer as u128 / info.denom as u128;
@@ -151,39 +149,6 @@ impl Timespec {
                 ).unwrap();
             }
         }
-        // --- HẾT ĐOẠN PATCH ---
-
-        // Try to use 64-bit time in preparation for Y2038.
-        #[cfg(all(
-            target_os = "linux",
-            target_env = "gnu",
-            target_pointer_width = "32",
-            not(target_arch = "riscv32")
-        ))]
-        {
-            use crate::sys::weak::weak;
-
-            // __clock_gettime64 was added to 32-bit arches in glibc 2.34,
-            // and it handles both vDSO calls and ENOSYS fallbacks itself.
-            weak!(
-                fn __clock_gettime64(
-                    clockid: libc::clockid_t,
-                    tp: *mut __timespec64,
-                ) -> libc::c_int;
-            );
-
-            if let Some(clock_gettime64) = __clock_gettime64.get() {
-                let mut t = MaybeUninit::uninit();
-                cvt(unsafe { clock_gettime64(clock, t.as_mut_ptr()) }).unwrap();
-                let t = unsafe { t.assume_init() };
-                return Timespec::new(t.tv_sec as i64, t.tv_nsec as i64).unwrap();
-            }
-        }
-
-        let mut t = MaybeUninit::uninit();
-        cvt(unsafe { libc::clock_gettime(clock, t.as_mut_ptr()) }).unwrap();
-        let t = unsafe { t.assume_init() };
-        Timespec::new(t.tv_sec as i64, t.tv_nsec as i64).unwrap()
     }
 
     pub fn sub_timespec(&self, other: &Timespec) -> Result<Duration, Duration> {
