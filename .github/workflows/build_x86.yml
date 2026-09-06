@@ -59,7 +59,7 @@ jobs:
           echo "********* Here is the build configuration: ********"
           cat ./config.toml
           echo "********* Starting to build *********"
-          /usr/bin/python3 ./x.py build
+          /usr/bin/python3 ./x.py build --stage 2
 
           ### Install and package
           echo "========= Installing and packaging ====="
