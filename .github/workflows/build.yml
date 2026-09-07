@@ -1,7 +1,9 @@
 name: Build custom Rust
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - '*'
 
 jobs:
   job0_buildjob:
