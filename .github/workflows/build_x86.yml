@@ -26,6 +26,7 @@ jobs:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/x86_64-apple-darwin/llvm
+            build/aarch64-apple-darwin/llvm
           restore-keys:
             ${{ runner.os }}-llvm19
 
@@ -77,6 +78,7 @@ jobs:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/x86_64-apple-darwin/llvm
+            build/aarch64-apple-darwin/llvm
 
       - name: Get Rust version
         run: echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
