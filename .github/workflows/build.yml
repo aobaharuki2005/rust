@@ -7,6 +7,7 @@ jobs:
   job0_buildjob:
     name: Build job
     runs-on: macos-15
+    if: ${{ contains(github.event.head_commit.message, 'BUILDAARCH64') }}
     steps:
       - name: Checkout code
         id: checkout
@@ -36,11 +37,40 @@ jobs:
           unzip -q ${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip
       
       - name: Build and package
-        run: ./build.sh
+        run: |
+          export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk
+          export MACOSX_DEPLOYMENT_TARGET=10.7
+          export MACOSX_STD_DEPLOYMENT_TARGET=10.7
+          export LDFLAGS="-ld_classic"
+          export VERSION=$(cat src/version)
+
+          echo "========= Build environment variables: ============"
+          printenv | grep -E "SDKROOT|MACOSX|LDFLAGS|VERSION"
+
+          ### Shallow synchronize submodules
+          echo "========= Fetching submodules =========="
+          git submodule update --depth 1 --init --recursive
+
+          ### Build Rustc and cargo
+          echo "========= Building Rustc and cargo ========="
+          echo "********* Symlink the configuration ... ********"
+          ln -sf ./config-legacy.toml ./config.toml
+          echo "********* Here is the build configuration: ********"
+          cat ./config.toml
+          echo "********* Starting to build *********"
+          /usr/bin/python3 ./x.py build --stage 2
+
+          ### Install and package
+          echo "========= Installing and packaging ====="
+          /usr/bin/python3 ./x.py install
+          cd build
+
+          zip -qr $VERSION-custom-aarch64.zip ./$VERSION-custom-aarch64
+
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
-        if: steps.cache-llvm-restore.outputs.cache-matched-key == ''
+        if: always()
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
