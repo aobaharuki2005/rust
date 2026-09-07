@@ -14,12 +14,6 @@ submodules = false
 tools = [ "cargo" ]
 cargo-native-static = true
 
-# [target.aarch64-apple-darwin]
-# llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
-
-# [target.x86_64-apple-darwin]
-# llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
-
 [llvm]
 download-ci-llvm = false
 libzstd = false   # available since Rust 1.82.0

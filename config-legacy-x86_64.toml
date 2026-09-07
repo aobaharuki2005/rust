@@ -1,8 +1,8 @@
 # Based on src/bootstrap/defaults/bootstrap.dists.toml
 
 [build]
-host = [ "aarch64-apple-darwin" ]
-target = [ "aarch64-apple-darwin", "x86_64-apple-darwin" ]
+host = [ "x86_64-apple-darwin" ]
+target = [ "x86_64-apple-darwin" ]
 docs = false
 extended = true
 
@@ -13,12 +13,6 @@ cargo = "/tmp/bootstrap/1.83.0-custom-aarch64/bin/cargo"
 submodules = false
 tools = [ "cargo" ]
 cargo-native-static = true
-
-[target.aarch64-apple-darwin]
-llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
-
-[target.x86_64-apple-darwin]
-llvm-config = "build/aarch64-apple-darwin/llvm/bin/llvm-config"
 
 [llvm]
 download-ci-llvm = false
@@ -34,5 +28,5 @@ optimize = "s"
 codegen-tests = false
 
 [install]
-prefix = "build/1.84.1-custom-aarch64"
+prefix = "build/1.84.1-custom-x86_64"
 sysconfdir = "etc"
