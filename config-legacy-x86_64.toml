@@ -23,6 +23,7 @@ experimental-targets = ""
 
 
 [rust]
+download-rustc = "if-unchanged"
 channel = "dev"
 optimize = "s"
 codegen-tests = false
