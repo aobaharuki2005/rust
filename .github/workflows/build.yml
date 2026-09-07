@@ -27,7 +27,7 @@ jobs:
           echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
           echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
           echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
-          echo "LDFLAGS='-ld_classic'" >> $GITHUB_ENV
+          echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
           
       - name: Confirm the environment values
         run: |
