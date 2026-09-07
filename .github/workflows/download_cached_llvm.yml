@@ -1,0 +1,41 @@
+name: Download cached LLVM
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  job0_buildjob:
+    name: Build job
+    runs-on: macos-15
+    if: ${{ contains(github.event.head_commit.message, 'DOWNLOADCACHEDLLVM') }}
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+
+      - name: Select Xcode 16.0
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Restore cached LLVM 19 (Rust 1.82-1.86)
+        id: cache-llvm-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm19-${{ github.run_id }}
+          path: |
+            build/x86_64-apple-darwin/llvm
+            build/aarch64-apple-darwin/llvm
+          restore-keys:
+            ${{ runner.os }}-llvm19
+      
+      - name: Zip cached LLVM
+        run: zip -qr cached-llvm-19.zip build
+
+      - name: Upload zipped LLVM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: ./cached-llvm-19.zip
