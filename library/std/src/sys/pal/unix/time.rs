@@ -1,6 +1,41 @@
 use crate::time::Duration;
 use crate::{fmt, io};
 
+// Khai báo các hàm Mach External
+#[cfg(target_vendor = "apple")]
+mod mach {
+    use crate::sync::atomic::{AtomicU64, Ordering};
+    use crate::libc;
+
+    #[repr(C)]
+    pub struct mach_timebase_info {
+        pub numer: u32,
+        pub denom: u32,
+    }
+
+    // Thêm từ khóa unsafe ở đây
+    unsafe extern "C" {
+        pub fn mach_absolute_time() -> u64;
+        pub fn mach_timebase_info(info: *mut mach_timebase_info) -> libc::c_int;
+        pub fn gettimeofday(tp: *mut libc::timeval, tzp: *mut libc::c_void) -> libc::c_int;
+    }
+
+    pub fn get_timebase() -> mach_timebase_info {
+        static ONCE: AtomicU64 = AtomicU64::new(0);
+        let val = ONCE.load(Ordering::Relaxed);
+        if val != 0 {
+            return mach_timebase_info { numer: (val >> 32) as u32, denom: val as u32 };
+        }
+        let mut info = mach_timebase_info { numer: 0, denom: 0 };
+        // Các lời gọi hàm bên trong khối unsafe extern mặc định được coi là unsafe
+        unsafe {
+            mach_timebase_info(&mut info);
+        }
+        ONCE.store(((info.numer as u64) << 32) | (info.denom as u64), Ordering::Relaxed);
+        info
+    }
+}
+
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 pub const UNIX_EPOCH: SystemTime = SystemTime { t: Timespec::zero() };
 #[allow(dead_code)] // Used for pthread condvar timeouts
@@ -39,7 +74,19 @@ impl SystemTime {
     }
 
     pub fn now() -> SystemTime {
-        SystemTime { t: Timespec::now(libc::CLOCK_REALTIME) }
+        // On macOS, clock_gettime was not available before 10.12 Sierra.
+        // Use gettimeofday for compatibility with macOS 10.7–10.11.
+        #[cfg(target_os = "macos")]
+        {
+            use crate::ptr;
+            let mut s = libc::timeval { tv_sec: 0, tv_usec: 0 };
+            crate::sys::cvt(unsafe { libc::gettimeofday(&mut s, ptr::null_mut()) }).unwrap();
+            SystemTime { t: Timespec::from_timeval(s) }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            SystemTime { t: Timespec::now(libc::CLOCK_REALTIME) }
+        }
     }
 
     pub fn sub_time(&self, other: &SystemTime) -> Result<Duration, Duration> {
@@ -73,6 +120,17 @@ impl Timespec {
         unsafe { Self::new_unchecked(0, 0) }
     }
 
+    // Construct a Timespec from a POSIX timeval (microsecond resolution).
+    // Used by the macOS SystemTime::now() path which calls gettimeofday.
+    #[cfg(target_os = "macos")]
+    fn from_timeval(t: libc::timeval) -> Timespec {
+        // tv_usec is microseconds; multiply by 1000 to get nanoseconds.
+        // The Apple-epoch-representation fixup in Timespec::new() applies here
+        // too, so route through the checked constructor.
+        Timespec::new(t.tv_sec as i64, 1_000 * t.tv_usec as i64)
+            .expect("gettimeofday returned invalid timeval")
+    }
+
     const fn new(tv_sec: i64, tv_nsec: i64) -> Result<Timespec, io::Error> {
         // On Apple OS, dates before epoch are represented differently than on other
         // Unix platforms: e.g. 1/10th of a second before epoch is represented as `seconds=-1`
@@ -100,9 +158,30 @@ impl Timespec {
         }
     }
 
+    #[allow(dead_code)]
     pub fn now(clock: libc::clockid_t) -> Timespec {
         use crate::mem::MaybeUninit;
         use crate::sys::cvt;
+
+        // --- ĐOẠN PATCH CHO APPLE ---
+        #[cfg(target_vendor = "apple")]
+        {
+            if clock == libc::CLOCK_REALTIME {
+                let mut tv = libc::timeval { tv_sec: 0, tv_usec: 0 };
+                unsafe { mach::gettimeofday(&mut tv, crate::ptr::null_mut()); }
+                return Timespec::new(tv.tv_sec as i64, (tv.tv_usec as i64) * 1000).unwrap();
+            } else {
+                // Giả định là CLOCK_MONOTONIC hoặc UPTIME_RAW
+                let info = mach::get_timebase();
+                let raw = unsafe { mach::mach_absolute_time() };
+                let nsecs = raw as u128 * info.numer as u128 / info.denom as u128;
+                return Timespec::new(
+                    (nsecs / NSEC_PER_SEC as u128) as i64,
+                    (nsecs % NSEC_PER_SEC as u128) as i64,
+                ).unwrap();
+            }
+        }
+        // --- HẾT ĐOẠN PATCH ---
 
         // Try to use 64-bit time in preparation for Y2038.
         #[cfg(all(
@@ -126,6 +205,7 @@ impl Timespec {
             }
         }
 
+        #[allow(unreachable_code)]
         let mut t = MaybeUninit::uninit();
         cvt(unsafe { libc::clock_gettime(clock, t.as_mut_ptr()) }).unwrap();
         let t = unsafe { t.assume_init() };
@@ -251,29 +331,134 @@ impl __timespec64 {
     }
 }
 
+// On macOS, clock_gettime was not available before 10.12 Sierra, so Instant
+// is implemented using mach_absolute_time() — which has been available since
+// 10.0 and gives monotonic, high-resolution tick counts that do not advance
+// while the system is asleep (equivalent to CLOCK_UPTIME_RAW semantics).
+//
+// On all other platforms (including other Apple OS families: iOS, watchOS,
+// tvOS, visionOS) the standard Timespec-based path is used, since those
+// platforms either always had clock_gettime or do not need 10.7–10.11 compat.
+#[cfg(target_os = "macos")]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Instant {
+    /// Raw mach timebase ticks from mach_absolute_time().
+    t: u64,
+}
+
+#[cfg(not(target_os = "macos"))]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Instant {
     t: Timespec,
 }
 
+// ---------------------------------------------------------------------------
+// macOS Instant — mach_absolute_time() based
+// ---------------------------------------------------------------------------
+
+#[cfg(target_os = "macos")]
+mod macos_instant {
+    use crate::sync::atomic::{AtomicU64, Ordering};
+    use crate::sys_common::mul_div_u64;
+    use crate::time::Duration;
+
+    use super::{Instant, NSEC_PER_SEC};
+
+    /// Mach timebase: the kernel-provided rational to convert ticks → nanoseconds.
+    /// Packed into a single u64 as `(denom << 32) | numer`; a zero value means
+    /// "not yet initialised" (safe because denom == 0 is never a valid timebase).
+    static INFO_BITS: AtomicU64 = AtomicU64::new(0);
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    struct MachTimebaseInfo {
+        numer: u32,
+        denom: u32,
+    }
+
+    extern "C" {
+        fn mach_absolute_time() -> u64;
+        fn mach_timebase_info(info: *mut MachTimebaseInfo) -> libc::c_int;
+    }
+
+    #[inline]
+    fn pack(info: MachTimebaseInfo) -> u64 {
+        ((info.denom as u64) << 32) | (info.numer as u64)
+    }
+
+    #[inline]
+    fn unpack(bits: u64) -> MachTimebaseInfo {
+        MachTimebaseInfo { numer: bits as u32, denom: (bits >> 32) as u32 }
+    }
+
+    fn timebase() -> MachTimebaseInfo {
+        let bits = INFO_BITS.load(Ordering::Relaxed);
+        if bits != 0 {
+            return unpack(bits);
+        }
+        let mut info = unpack(0);
+        unsafe { mach_timebase_info(&mut info) };
+        INFO_BITS.store(pack(info), Ordering::Relaxed);
+        info
+    }
+
+    impl Instant {
+        pub fn now() -> Instant {
+            Instant { t: unsafe { mach_absolute_time() } }
+        }
+
+        pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
+            let diff = self.t.checked_sub(other.t)?;
+            let info = timebase();
+            // Convert mach ticks to nanoseconds: ticks * numer / denom
+            let nanos = mul_div_u64(diff, info.numer as u64, info.denom as u64);
+            Some(Duration::new(nanos / NSEC_PER_SEC, (nanos % NSEC_PER_SEC) as u32))
+        }
+
+        pub fn checked_add_duration(&self, other: &Duration) -> Option<Instant> {
+            Some(Instant { t: self.t.checked_add(dur_to_ticks(other)?)? })
+        }
+
+        pub fn checked_sub_duration(&self, other: &Duration) -> Option<Instant> {
+            Some(Instant { t: self.t.checked_sub(dur_to_ticks(other)?)? })
+        }
+    }
+
+    impl core::fmt::Debug for Instant {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            // Surface the tick value directly; the public std::time::Instant
+            // Debug impl wraps this with a since-epoch nanosecond conversion.
+            f.debug_struct("Instant").field("t", &self.t).finish()
+        }
+    }
+
+    /// Convert a Duration to mach ticks (inverse of the numer/denom conversion).
+    fn dur_to_ticks(dur: &Duration) -> Option<u64> {
+        let nanos = dur
+            .as_secs()
+            .checked_mul(NSEC_PER_SEC)?
+            .checked_add(dur.subsec_nanos() as u64)?;
+        let info = timebase();
+        // ticks = nanos * denom / numer
+        Some(mul_div_u64(nanos, info.denom as u64, info.numer as u64))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Non-macOS Instant — clock_gettime() based
+// ---------------------------------------------------------------------------
+
+#[cfg(not(target_os = "macos"))]
 impl Instant {
     pub fn now() -> Instant {
-        // https://www.manpagez.com/man/3/clock_gettime/
-        //
-        // CLOCK_UPTIME_RAW   clock that increments monotonically, in the same man-
-        //                    ner as CLOCK_MONOTONIC_RAW, but that does not incre-
-        //                    ment while the system is asleep.  The returned value
-        //                    is identical to the result of mach_absolute_time()
-        //                    after the appropriate mach_timebase conversion is
-        //                    applied.
-        //
-        // Instant on macos was historically implemented using mach_absolute_time;
-        // we preserve this value domain out of an abundance of caution.
+        // Other Apple platforms (iOS, watchOS, tvOS, visionOS) use
+        // CLOCK_UPTIME_RAW for the same don't-advance-while-sleeping semantics
+        // that mach_absolute_time() provides on macOS.
         #[cfg(target_vendor = "apple")]
-        const clock_id: libc::clockid_t = libc::CLOCK_UPTIME_RAW;
+        const CLOCK_ID: libc::clockid_t = 0;
         #[cfg(not(target_vendor = "apple"))]
-        const clock_id: libc::clockid_t = libc::CLOCK_MONOTONIC;
-        Instant { t: Timespec::now(clock_id) }
+        const CLOCK_ID: libc::clockid_t = libc::CLOCK_MONOTONIC;
+        Instant { t: Timespec::now(CLOCK_ID) }
     }
 
     pub fn checked_sub_instant(&self, other: &Instant) -> Option<Duration> {
@@ -289,6 +474,7 @@ impl Instant {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 impl fmt::Debug for Instant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Instant")

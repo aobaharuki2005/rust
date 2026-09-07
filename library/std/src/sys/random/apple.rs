@@ -8,8 +8,7 @@
 //! Note that technically, `arc4random_buf` is available as well, but that calls
 //! into the same system service anyway, and `CCRandomGenerateBytes` has been
 //! proven to be App Store-compatible.
-
+use libc::arc4random_buf;
 pub fn fill_bytes(bytes: &mut [u8]) {
-    let ret = unsafe { libc::CCRandomGenerateBytes(bytes.as_mut_ptr().cast(), bytes.len()) };
-    assert_eq!(ret, libc::kCCSuccess, "failed to generate random data");
+    unsafe { arc4random_buf(bytes.as_mut_ptr().cast(), bytes.len()) }
 }
