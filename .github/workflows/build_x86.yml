@@ -1,4 +1,4 @@
-name: Build custom Rust
+name: Build custom Rust (x86_64 binary)
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
 jobs:
   build:
     name: Build Rust
-    runs-on: macos-15
-    if: ${{ contains(github.event.head_commit.message, 'BUILDRUST') }}
+    runs-on: macos-15-intel
+    if: ${{ contains(github.event.head_commit.message, 'BUILDX86RUSTONLY') }}
     steps:
       - name: Checkout code
         id: checkout
@@ -63,24 +63,24 @@ jobs:
           aria2c -x4 https://github.com/aobaharuki2005/rust/releases/download/${{ env.RUST_BOOTSTRAP_VERSION }}-custom/${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
           unzip -q ${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
       
-      - name: Build and package (aarch64 host)
-        run: |
-          echo "========= FETCHING SUBMODULES =========="
-          git submodule update --depth 1 --init --recursive
+      # - name: Build and package (aarch64 host)
+      #   run: |
+      #     echo "========= FETCHING SUBMODULES =========="
+      #     git submodule update --depth 1 --init --recursive
 
-          echo "========= BUILDING RUSTC AND CARGO ========="
-          echo "********* Symlink the configuration ... ********"
-          ln -sf ./config-legacy-aarch64.toml ./config.toml
-          echo "********* Here is the build configuration: ********"
-          cat ./config.toml
-          echo "********* Starting to build *********"
-          /usr/bin/python3 ./x.py build --stage 2
+      #     echo "========= BUILDING RUSTC AND CARGO ========="
+      #     echo "********* Symlink the configuration ... ********"
+      #     ln -sf ./config-legacy-aarch64.toml ./config.toml
+      #     echo "********* Here is the build configuration: ********"
+      #     cat ./config.toml
+      #     echo "********* Starting to build *********"
+      #     /usr/bin/python3 ./x.py build --stage 2
 
-          ### Install and package
-          echo "========= INSTALL AND PACKAGE ========="
-          /usr/bin/python3 ./x.py install
-          cd build
-          zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
+      #     ### Install and package
+      #     echo "========= INSTALL AND PACKAGE ========="
+      #     /usr/bin/python3 ./x.py install
+      #     cd build
+      #     zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
 
       - name: Build and package (x86_64 host)
         run: |
@@ -111,11 +111,11 @@ jobs:
             build/aarch64-apple-darwin/llvm
             build/x86_64-apple-darwin/llvm
 
-      - name: Upload packaged Rust aarch64
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with: 
-          archive: false
-          path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+      # - name: Upload packaged Rust aarch64
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      #   with: 
+      #     archive: false
+      #     path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
 
       - name: Upload packaged Rust aarch64
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
