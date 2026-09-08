@@ -1,0 +1,120 @@
+name: Build custom Rust
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    name: Build Rust
+    runs-on: macos-15-intel
+    if: ${{ contains(github.event.head_commit.message, 'BUILDRUST') }}
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 32
+
+      - name: Select Xcode 16.0
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+      
+      - name: Set targeted and bootstrap Rust version
+        run: |
+          echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
+          echo "RUST_BOOTSTRAP_VERSION=1.84.1" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
+          
+      - name: Confirm the environment values
+        run: |
+          printenv | grep -E "SDKROOT|MACOSX|LDFLAGS|VERSION"
+
+      - name: Restore cached LLVM 17 (Rust 1.73-1.77)
+        id: cache-llvm-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm17-${{ github.run_id }}
+          path: build/x86_64-apple-darwin/llvm
+          restore-keys:
+            ${{ runner.os }}-llvm17
+
+      # - name: Manually bootstrapping LLVM 19
+      #   run: |
+      #     if [[ ! -d build/aarch64-apple-darwin/llvm || ! -d build/x86_64-apple-darwin/llvm ]]; then
+      #       # Clean up build directory first
+      #       mkdir -p ./build && rm -rf ./build
+      #       aria2c -x4 https://github.com/aobaharuki2005/llvm-project-for-rust/releases/download/v19.1-patched/cached-llvm-19.zip
+      #       unzip -q cached-llvm-19.zip
+      #       # Check directory and file structure
+      #       brew install tree
+      #       tree -L 3 .
+      #     fi
+
+      # - name: Manually bootstrapping custom Rust
+      #   run: |
+      #     mkdir /tmp/bootstrap
+      #     cd /tmp/bootstrap
+      #     aria2c -x4 https://github.com/aobaharuki2005/rust/releases/download/${{ env.RUST_BOOTSTRAP_VERSION }}-custom/${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
+      #     unzip -q ${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
+      
+      # - name: Build and package (aarch64 host)
+      #   run: |
+      #     echo "========= FETCHING SUBMODULES =========="
+      #     git submodule update --depth 1 --init --recursive
+
+      #     echo "========= BUILDING RUSTC AND CARGO ========="
+      #     echo "********* Symlink the configuration ... ********"
+      #     ln -sf ./config-legacy-aarch64.toml ./config.toml
+      #     echo "********* Here is the build configuration: ********"
+      #     cat ./config.toml
+      #     echo "********* Starting to build *********"
+      #     /usr/bin/python3 ./x.py build --stage 2
+
+      #     ### Install and package
+      #     echo "========= INSTALL AND PACKAGE ========="
+      #     /usr/bin/python3 ./x.py install
+      #     cd build
+      #     zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
+
+      - name: Build and package (x86_64 host)
+        run: |
+          echo "========= FETCHING SUBMODULES =========="
+          git submodule update --depth 1 --init --recursive
+
+          echo "========= BUILDING RUSTC AND CARGO ========="
+          echo "********* Symlink the configuration ... ********"
+          ln -sf ./config-legacy-x86_64.toml ./config.toml
+          echo "********* Here is the build configuration: ********"
+          cat ./config.toml
+          echo "********* Starting to build *********"
+          /usr/bin/python3 ./x.py build --stage 2
+
+          ### Install and package
+          echo "========= INSTALL AND PACKAGE ========="
+          /usr/bin/python3 ./x.py install
+          cd build
+          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
+
+      - name: Save built LLVM artifacts if it was not reused
+        id: cache-llvm-save
+        if: failure() || steps.cache-llvm-restore.outputs.cache-matched-key == ''
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          key: ${{ runner.os }}-llvm19-${{ github.run_id }}
+          path: build/x86_64-apple-darwin/llvm
+
+      # - name: Upload packaged Rust aarch64
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      #   with: 
+      #     archive: false
+      #     path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+
+      - name: Upload packaged Rust aarch64
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
