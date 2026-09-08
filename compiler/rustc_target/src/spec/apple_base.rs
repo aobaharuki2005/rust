@@ -67,9 +67,9 @@ impl Arch {
             // Only macOS 10.12+ is supported, which means
             // all x86_64/x86 CPUs must be running at least penryn
             // https://github.com/llvm/llvm-project/blob/01f924d0e37a5deae51df0d77e10a15b63aa0c0f/clang/lib/Driver/ToolChains/Arch/X86.cpp#L79-L82
-            I386 | I686 => "penryn",
-            X86_64 | X86_64_sim => "penryn",
-            X86_64_macabi => "penryn",
+            I386 | I686 => "core2",
+            X86_64 | X86_64_sim => "core2",
+            X86_64_macabi => "core2",
             // Note: `core-avx2` is slightly more advanced than `x86_64h`, see
             // comments (and disabled features) in `x86_64h_apple_darwin` for
             // details. It is a higher baseline then `penryn` however.
@@ -133,7 +133,7 @@ pub fn opts(os: &'static str, arch: Arch) -> TargetOptions {
         // LLVM notes that macOS 10.11+ and iOS 9+ default
         // to v4, so we do the same.
         // https://github.com/llvm/llvm-project/blob/378778a0d10c2f8d5df8ceff81f95b6002984a4b/clang/lib/Driver/ToolChains/Darwin.cpp#L1203
-        default_dwarf_version: 4,
+        default_dwarf_version: 2,
         frame_pointer: FramePointer::Always,
         has_rpath: true,
         dll_suffix: ".dylib".into(),
@@ -229,7 +229,7 @@ fn macos_default_deployment_target(arch: Arch) -> (u32, u32) {
     match arch {
         // Note: Arm64_sim is not included since macOS has no simulator.
         Arm64 | Arm64_macabi => (11, 0),
-        _ => (10, 12),
+        _ => (10, 7),
     }
 }
 
