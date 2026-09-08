@@ -8,14 +8,14 @@ on:
 jobs:
   job0_buildjob:
     name: Build job
-    runs-on: macos-15
+    runs-on: macos-15-intel
     if: ${{ contains(github.event.head_commit.message, 'BUILDX86') }}
     steps:
       - name: Checkout code
         id: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 1
+          fetch-depth: 32
 
       - name: Select Xcode 16.0
         run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
@@ -27,24 +27,35 @@ jobs:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/x86_64-apple-darwin/llvm
-            build/aarch64-apple-darwin/llvm
           restore-keys:
             ${{ runner.os }}-llvm19
+
+      - name: Manually bootstrapping LLVM 19
+        run: |
+          if [[ ! -d build/aarch64-apple-darwin/llvm || ! -d build/x86_64-apple-darwin/llvm ]]; then
+            # Clean up build directory first
+            mkdir -p ./build && rm -rf ./build
+            aria2c -x4 https://github.com/aobaharuki2005/llvm-project-for-rust/releases/download/v19.1-patched/cached-llvm-19.zip
+            unzip -q cached-llvm-19.zip
+            # Check directory and file structure
+            brew install tree
+            tree -L 3 .
+          fi
 
       - name: Manually bootstrapping custom Rust
         run: |
           export RUST_BOOTSTRAP_VERSION=1.82.0
           mkdir /tmp/bootstrap
           cd /tmp/bootstrap
-          curl -L https://github.com/aobaharuki2005/rust/releases/download/${RUST_BOOTSTRAP_VERSION}-custom/${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip -o ${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip
-          unzip -q ${RUST_BOOTSTRAP_VERSION}-custom-aarch64.zip
+          aria2c -x4 https://github.com/aobaharuki2005/rust/releases/download/${RUST_BOOTSTRAP_VERSION}-custom/${RUST_BOOTSTRAP_VERSION}-custom-x86_64.zip
+          unzip -q ${RUST_BOOTSTRAP_VERSION}-custom-x86_64.zip
       
       - name: Build and package
         run: |
           export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk
           export MACOSX_DEPLOYMENT_TARGET=10.7
           export MACOSX_STD_DEPLOYMENT_TARGET=10.7
-          export LDFLAGS="-ld_classic"
+          export LDFLAGS=-ld_classic
           export VERSION=$(cat src/version)
 
           echo "========= Build environment variables: ============"
@@ -79,7 +90,6 @@ jobs:
           key: ${{ runner.os }}-llvm19-${{ github.run_id }}
           path: |
             build/x86_64-apple-darwin/llvm
-            build/aarch64-apple-darwin/llvm
 
       - name: Get Rust version
         run: echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
@@ -90,7 +100,3 @@ jobs:
         with: 
           archive: false
           path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
-
-
-
-

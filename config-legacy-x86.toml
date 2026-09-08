@@ -8,8 +8,8 @@ docs = false
 extended = true
 
 ### In case of using custom built Rust, uncomment and modify these line
-rustc = "/tmp/bootstrap/1.82.0-custom-aarch64/bin/rustc"
-cargo = "/tmp/bootstrap/1.82.0-custom-aarch64/bin/cargo"
+rustc = "/tmp/bootstrap/1.82.0-custom-x86/bin/rustc"
+# cargo = "/tmp/bootstrap/1.82.0-custom-x86_64/bin/cargo"
 
 submodules = false
 tools = [ "cargo" ]
