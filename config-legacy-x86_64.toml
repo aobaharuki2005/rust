@@ -20,6 +20,9 @@ download-ci-llvm = false
 static-libstdcpp = true
 targets = "X86;AArch64"
 experimental-targets = ""
+cflags = "-march=core2"
+cxxflags = "-march=core2"
+ldflags = "-ld_classic"
 
 [rust]
 channel = "dev"

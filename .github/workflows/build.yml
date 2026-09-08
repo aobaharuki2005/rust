@@ -24,7 +24,14 @@ jobs:
         run: |
           echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
           echo "RUST_BOOTSTRAP_VERSION=1.73.0" >> $GITHUB_ENV
-          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+
+          # Bootstrap older macOS 10.15 SDK
+          # echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+          echo "SDKROOT=/tmp/MacOSX10.15.sdk" >> $GITHUB_ENV
+          cd /tmp
+          aria2c -x4 https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.15/MacOSX10.15.tar.bz2
+          tar -xjf MacOSX10.15.tar.bz2
+
           echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
           echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
           echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
@@ -53,11 +60,11 @@ jobs:
           echo "********* Here is the build configuration: ********"
           cat ./config.toml
           echo "********* Starting to build *********"
-          RUSTFLAGS="-C target-cpu=core2" /usr/bin/python3 ./x.py build --stage 2
+          RUSTFLAGS="-Ctarget-cpu=core2" /usr/bin/python3 ./x.py build --stage 2
 
           ### Install and package
           echo "========= INSTALL AND PACKAGE ========="
-          RUSTFLAGS="-C target-cpu=core2" /usr/bin/python3 ./x.py install
+          RUSTFLAGS="-Ctarget-cpu=core2" /usr/bin/python3 ./x.py install
           cd build
           zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
 
