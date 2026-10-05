@@ -19,18 +19,23 @@ jobs:
       - name: Select Xcode 16.0
         run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
       
-      - name: Set targeted and bootstrap Rust version
+      - name: Set necessary build environment variables
         run: |
           echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
           echo "RUST_BOOTSTRAP_VERSION=1.86.0" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
 
       - name: Restore cached LLVM 20 (Rust 1.87-1.90)
         id: cache-llvm-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 (27/6/2026)
         with:
           key: ${{ runner.os }}-llvm20-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
+            build/x86_64-apple-darwin/llvm
           restore-keys:
             ${{ runner.os }}-llvm20
 
@@ -38,78 +43,71 @@ jobs:
         run: |
           mkdir /tmp/bootstrap
           cd /tmp/bootstrap
-          curl -L https://github.com/aobaharuki2005/rust/releases/download/${{ env.RUST_BOOTSTRAP_VERSION }}-custom/${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip -o ${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
+          aria2c -x4 https://github.com/aobaharuki2005/rust/releases/download/${{ env.RUST_BOOTSTRAP_VERSION }}-custom/${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
           unzip -q ${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
       
-      - name: Build and package
+      - name: Build and package (aarch64 host)
         run: |
-          ### Setting up environment variables
-          export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk
-          export MACOSX_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
-          export MACOSX_STD_DEPLOYMENT_TARGET=11.0    # for cross-compiling build only
-          export LDFLAGS="-ld_classic"
+          echo "========= FETCHING SUBMODULES =========="
+          git submodule update --depth 1 --init --recursive
 
-          ### Check if environment variables have been correctly set up
-          echo "=== STEP 0: Build environment variables: ===="
-          printenv | grep -E "SDKROOT|MACOSX|LDFLAGS"
-          echo "\n"
-
-          ### Shallow synchronize submodules
-          echo "====== STEP 1: Fetch submodules ====="
-          echo "------ Fetching ..."
-          git submodule update --depth 1 --init
-          echo "------ Checking if llvm-project has been checked out correctly..."
-          cd src/llvm-project
-          git log -1 --oneline
-          # Come back to the original directory
-          cd ../..
-
-          ### Build Rustc and cargo
-          echo "====== STEP 2: Build Rustc and cargo ====="
-          if [ ! -e "build/aarch64-apple-darwin/llvm/bin/llvm-config" ]; then
-            echo "***** No cached LLVM found. Building LLVM ... *****"
-            ln -sf ./bootstrap-legacy-nocachedllvm.toml ./bootstrap.toml
-            python3 ./x.py build --stage 2 src/llvm-project
-          else
-            echo "***** Found LLVM cache! *****"
-          fi 
-          echo "------ Symlink the configuration"
-          ln -sf ./bootstrap-legacy-cachedllvm.toml ./bootstrap.toml
-          echo "------ Here is the build configuration:"
-          cat ./bootstrap.toml
-          echo "***** Building Rust ... *****"
-          python3 ./x.py build --stage 2
+          echo "========= BUILDING RUSTC AND CARGO (aarch64) ========="
+          echo "********* Symlink the configuration ... ********"
+          ln -sf ./bootstrap-legacy-aarch64.toml ./config.toml
+          echo "********* Here is the build configuration: ********"
+          cat ./config.toml
+          echo "********* Starting to build *********"
+          /usr/bin/python3 ./x.py build --stage 2
 
           ### Install and package
-          echo "====== STEP 3: Install and package ====="
-          python3 ./x.py install
+          echo "========= INSTALL AND PACKAGE ========="
+          /usr/bin/python3 ./x.py install
           cd build
           zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
+
+      - name: Build and package (x86_64 host)
+        run: |
+          echo "========= BUILDING RUSTC AND CARGO (x86_64) ========="
+          echo "********* Symlink the configuration ... ********"
+          ln -sf ./bootstrap-legacy-x86_64.toml ./config.toml
+          echo "********* Here is the build configuration: ********"
+          cat ./config.toml
+          echo "********* Starting to build *********"
+          /usr/bin/python3 ./x.py build --stage 2
+
+          ### Install and package
+          echo "========= INSTALL AND PACKAGE ========="
+          /usr/bin/python3 ./x.py install
+          cd build
+          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
         if: failure() || steps.cache-llvm-restore.outputs.cache-matched-key == ''
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 (27/6/2026)
         with:
           key: ${{ runner.os }}-llvm20-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
+            build/x86_64-apple-darwin/llvm
 
-      - name: Upload packaged Rust
-        id: upload_packaged_rust
+      - name: Upload packaged Rust (aarch64 host)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with: 
           archive: false
           path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+
+      - name: Upload packaged Rust (x86_64 host)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RUST_VERSION }}-custom
           name: ${{ env.RUST_VERSION }}-custom
-          files: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+          files: build/${{ env.RUST_VERSION }}-custom-*.zip
           draft: false
           prerelease: false
-
-
-
