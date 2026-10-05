@@ -30,16 +30,6 @@ jobs:
           echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
           echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
 
-      - name: Restore cached LLVM 20 (Rust 1.87-1.90)
-        id: cache-llvm-restore
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 (27/6/2026)
-        with:
-          key: ${{ runner.os }}-llvm20-${{ github.run_id }}
-          path: |
-            build/aarch64-apple-darwin/llvm
-          restore-keys:
-            ${{ runner.os }}-llvm20
-
       - name: Manually bootstrapping custom Rust
         run: |
           mkdir /tmp/bootstrap
@@ -66,14 +56,10 @@ jobs:
           cd build
           zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
 
-      - name: Save built LLVM artifacts if it was not reused
-        id: cache-llvm-save
-        if: failure() || steps.cache-llvm-restore.outputs.cache-matched-key == ''
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 (27/6/2026)
-        with:
-          key: ${{ runner.os }}-llvm20-${{ github.run_id }}
-          path: |
-            build/aarch64-apple-darwin/llvm
+      - name: Zip LLVM
+        run: |
+          python3 ./x.py clean
+          zip -qr cached-llvm-20.zip build/aarch64-apple-darwin/llvm
 
       - name: Upload packaged Rust (aarch64 host)
         id: upload_packaged_rust
@@ -81,6 +67,12 @@ jobs:
         with: 
           archive: false
           path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
+
+      - name: Upload zipped LLVM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: ./cached-llvm-20.zip
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
