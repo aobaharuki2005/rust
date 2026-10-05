@@ -35,7 +35,7 @@ jobs:
           key: ${{ runner.os }}-llvm20-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
-            build/x86_64-apple-darwin/llvm
+            # build/x86_64-apple-darwin/llvm
           restore-keys:
             ${{ runner.os }}-llvm20
 
@@ -65,21 +65,21 @@ jobs:
           cd build
           zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
 
-      - name: Build and package (x86_64 host)
-        run: |
-          echo "========= BUILDING RUSTC AND CARGO (x86_64) ========="
-          echo "********* Symlink the configuration ... ********"
-          ln -sf ./bootstrap-legacy-x86_64.toml ./config.toml
-          echo "********* Here is the build configuration: ********"
-          cat ./config.toml
-          echo "********* Starting to build *********"
-          /usr/bin/python3 ./x.py build --stage 2
+      # - name: Build and package (x86_64 host)
+      #   run: |
+      #     echo "========= BUILDING RUSTC AND CARGO (x86_64) ========="
+      #     echo "********* Symlink the configuration ... ********"
+      #     ln -sf ./bootstrap-legacy-x86_64.toml ./config.toml
+      #     echo "********* Here is the build configuration: ********"
+      #     cat ./config.toml
+      #     echo "********* Starting to build *********"
+      #     /usr/bin/python3 ./x.py build --stage 2
 
-          ### Install and package
-          echo "========= INSTALL AND PACKAGE ========="
-          /usr/bin/python3 ./x.py install
-          cd build
-          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
+      #     ### Install and package
+      #     echo "========= INSTALL AND PACKAGE ========="
+      #     /usr/bin/python3 ./x.py install
+      #     cd build
+      #     zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
 
       - name: Save built LLVM artifacts if it was not reused
         id: cache-llvm-save
@@ -89,7 +89,7 @@ jobs:
           key: ${{ runner.os }}-llvm20-${{ github.run_id }}
           path: |
             build/aarch64-apple-darwin/llvm
-            build/x86_64-apple-darwin/llvm
+            # build/x86_64-apple-darwin/llvm
 
       - name: Upload packaged Rust (aarch64 host)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -97,11 +97,11 @@ jobs:
           archive: false
           path: build/${{ env.RUST_VERSION }}-custom-aarch64.zip
 
-      - name: Upload packaged Rust (x86_64 host)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with: 
-          archive: false
-          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
+      # - name: Upload packaged Rust (x86_64 host)
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      #   with: 
+      #     archive: false
+      #     path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
