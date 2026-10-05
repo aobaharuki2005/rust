@@ -55,9 +55,7 @@ jobs:
           zip -qr ${{ env.RUST_VERSION }}-custom-aarch64.zip ./${{ env.RUST_VERSION }}-custom-aarch64
 
       - name: Zip LLVM
-        run: |
-          python3 ./x.py clean
-          zip -qr cached-llvm-20.zip build/aarch64-apple-darwin/llvm
+        run: zip -qr cached-llvm-20.zip build/aarch64-apple-darwin/llvm
 
       - name: Upload packaged Rust (aarch64 host)
         id: upload_packaged_rust
