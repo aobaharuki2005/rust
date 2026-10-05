@@ -19,10 +19,14 @@ jobs:
       - name: Select Xcode 16.0
         run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
       
-      - name: Set targeted and bootstrap Rust version
+      - name: Set necessary build environment variables
         run: |
           echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
-          echo "RUST_BOOTSTRAP_VERSION=1.85.1" >> $GITHUB_ENV
+          echo "RUST_BOOTSTRAP_VERSION=1.84.1" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
       
       - name: Restore cached LLVM 19 (Rust 1.82-1.86)
         id: cache-llvm-restore
