@@ -27,5 +27,5 @@ optimize = "s"
 codegen-tests = false
 
 [install]
-prefix = "build/1.85.1-custom-x86_64"
+prefix = "build/1.86.0-custom-x86_64"
 sysconfdir = "etc"
