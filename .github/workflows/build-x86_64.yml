@@ -1,0 +1,62 @@
+name: Build custom Rust (x86_64 host, cross-compiling)
+
+on:
+  push:
+
+jobs:
+  build:
+    name: Build job
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 100
+
+      - name: Select Xcode 16.0
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+      
+      - name: Set necessary build env
+        run: |
+          echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
+          echo "RUST_BOOTSTRAP_VERSION=1.88.0" >> $GITHUB_ENV
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
+          echo "LDFLAGS=-ld_classic" >> $GITHUB_ENV
+
+      - name: Manually bootstrapping custom Rust
+        run: |
+          mkdir /tmp/bootstrap
+          cd /tmp/bootstrap
+          aria2c -x4 https://github.com/aobaharuki2005/rust/releases/download/${{ env.RUST_BOOTSTRAP_VERSION }}-custom/${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
+          unzip -q ${{ env.RUST_BOOTSTRAP_VERSION }}-custom-aarch64.zip
+      
+      - name: Build and package (x86_64 host)
+        run: |
+          echo "========= FETCHING SUBMODULES =========="
+          git submodule update --depth 1 --init --recursive
+
+          echo "========= BUILDING RUSTC AND CARGO (x86_64) ========="
+          echo "********* Symlink the configuration ... ********"
+          ln -sf ./bootstrap-legacy-x86_64.toml ./bootstrap.toml
+          echo "********* Here is the build configuration: ********"
+          cat ./bootstrap.toml
+          echo "********* Starting to build *********"
+          /usr/bin/python3 ./x.py build --stage 2
+
+          ### Install and package
+          echo "========= INSTALL AND PACKAGE ========="
+          /usr/bin/python3 ./x.py install
+          cd build
+          zip -qr ${{ env.RUST_VERSION }}-custom-x86_64.zip ./${{ env.RUST_VERSION }}-custom-x86_64
+
+      - name: Upload packaged Rust
+        id: upload_packaged_rust
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: 
+          archive: false
+          path: build/${{ env.RUST_VERSION }}-custom-x86_64.zip
