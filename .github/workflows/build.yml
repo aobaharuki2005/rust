@@ -22,7 +22,7 @@ jobs:
       - name: Set necessary build env
         run: |
           echo "RUST_VERSION=$(cat src/version)" >> $GITHUB_ENV
-          echo "RUST_BOOTSTRAP_VERSION=1.87.0" >> $GITHUB_ENV
+          echo "RUST_BOOTSTRAP_VERSION=1.88.0" >> $GITHUB_ENV
           echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" >> $GITHUB_ENV
           echo "MACOSX_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
           echo "MACOSX_STD_DEPLOYMENT_TARGET=10.7" >> $GITHUB_ENV
